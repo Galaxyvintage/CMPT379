@@ -62,8 +62,9 @@
 #define T_STRINGCONSTANT 47 //
 
 #define T_ID           48
-#define T_WHITEsPACE   49
-#define T_COMMENT      50
+#define T_WHITESPACE   49
+#define T_NEWLINE      50
+#define T_COMMENT      51
 using namespace std;
 %}
 
@@ -102,7 +103,6 @@ backspace       [\b]
 BoolConstant  (true|false) 
 Constant      (int_lit | char_lit | BoolConstant)
 
-
 %%
   /*
     Pattern definitions for all tokens 
@@ -115,7 +115,8 @@ Constant      (int_lit | char_lit | BoolConstant)
   *   2. choose the one listed first if there is a conflict     
   */
 
- // Keywords (18 of them)
+
+// Keywords (18 of them)
 
 func                       { return T_FUNC;       }
 package                    { return T_PACKAGE;    }
@@ -138,43 +139,45 @@ return                     { return T_RETURN;     }
 
 // Operators and Delimiters(26 of them)
 
-\{                         { return  ; }
-\}                         { return  ; }
-\(                         { return  ; }
-\)                         { return  ; }
-\[                         { return  ; }
-\]                         { return  ; }
-\,                         { return  ; }
-\;                         { return  ; }
+\{                         { return  T_LCB;       }
+\}                         { return  T_RCB;       }
+\(                         { return  T_LPAREN;    }
+\)                         { return  T_RPAREN;    }
+\[                         { return  T_LSB;       }
+\]                         { return  T_RSB;       }
+\,                         { return  T_COMMA;     }
+\;                         { return  T_SEMICOLON; }
 
-\=\=                       { return  ; }
-\<\=                       { return  ; }
-\=\>                       { return  ; }
-\!\=                       { return  ; }
-\<\<                       { return  ; }
-\>\>                       { return  ; }
-\&\&                       { return  ; }
-\|\|                       { return  ; }
+\=\=                       { return  T_EQ;        }
+\<\=                       { return  T_LEQ;       }
+\=\>                       { return  T_GEQ;       }
+\!\=                       { return  T_NEQ;       }
+\<\<                       { return  T_LEFTSHIFT; }
+\>\>                       { return  T_RIGHTSHIFT;}
+\&\&                       { return  T_AND;       }
+\|\|                       { return  T_OR;        }
 
-\+                         { return  ; }
-\-                         { return  ; }
-\*                         { return  ; }
-\/                         { return  ; }
-\!                         { return  ; } 
-\=                         { return  ; }
-\<                         { return  ; }
-\>                         { return  ; }
-\%                         { return  ; }
-\.                         { return  ; }
+\+                         { return  T_PLUS;      }
+\-                         { return  T_MINUS;     }
+\*                         { return  T_MULT;      }
+\/                         { return  T_DIV;       }
+\!                         { return  T_NOT;       } 
+\=                         { return  T_ASSIGN;    }
+\<                         { return  T_LT;        }
+\>                         { return  T_RT;        }
+\%                         { return  T_MOD;       }
+\.                         { return  T_DOT;       }
 
-int_lit                    { return  ; }
-char_lit                   { return  ; }
-string_lit                 { return  ; }
+// Others 
 
-[a-zA-Z\_][a-zA-Z\_0-9]*   { return  ; }  // T_ID
-[\t\r\a\v\b ]+             { return  ; }  // T_WHITESPACE
-\n                         { return  ; }  // T_WHITESPACE \n 
-comment                    { return  ; }  
+int_lit                    { return  T_INTCONSTANT;    }
+char_lit                   { return  T_CHARCONSTANT;   }
+string_lit                 { return  T_STRINGCONSTANT; }
+
+[a-zA-Z\_][a-zA-Z\_0-9]*   { return  T_ID;        }  // T_ID
+[\t\r\a\v\b\f ]+           { return  T_WHITESPACE;}  // T_WHITESPACE
+\n                         { return  T_NEWLINE;   }  // T_WHITESPACE \n 
+comment                    { return  T_COMMENT;   }  
 .                          { cerr << "Error: unexpected character in input" << endl; return -1; }
 
 %%
