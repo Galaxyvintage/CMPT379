@@ -1,9 +1,8 @@
-
 %{
 /*
  * Author      : Zheyang Li 
  * Date Created: 05-26-2016
- * Date Edited : 05-29-2016
+ * Date Edited : 05-30-2016
  * Deadline    : 06-06-2016
  * Description : lex analyzer for Decaf language 
  */
@@ -150,7 +149,7 @@ return                     { return T_RETURN;     }
 \/\/([\a|\b|\h|\v|\f|\r| -~]+)\n                               { return  T_COMMENT;        }
 ({decimal_digit}+)|(0(x|X){hex_digit}+)                        { return  T_INTCONSTANT;    }
 \'{char_lit}\'                                                 { return  T_CHARCONSTANT;   }
-\"([\a\b\h\v\f\r -\!\#-\[\]-~]|\\(n|r|t|v|f|a|b|\\|\'|\"))+\"  { return  T_STRINGCONSTANT; }
+\"([\a\b\h\v\f\r -\!\#-\[\]-~]|\\(n|r|t|v|f|a|b|\\|\'|\"))*\"   { return  T_STRINGCONSTANT; }
 
 [a-zA-Z\_][a-zA-Z\_0-9]*   { return  T_ID;        } 
 [\t\r\v\f\n ]+             { return  T_WHITESPACE;}  
