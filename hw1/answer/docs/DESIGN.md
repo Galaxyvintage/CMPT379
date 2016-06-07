@@ -3,7 +3,7 @@ Design document for Decaf Lexical Analyzer
 ### Part 1
 
 1. C/C++ headers
-2. Macro definitions for numbers of tokens and errors    
+2. Macro definitions for tokens and errors numbering  
 
 
 ### Part 2
