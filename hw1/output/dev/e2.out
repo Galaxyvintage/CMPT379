@@ -45,3 +45,4 @@ T_COMMENT // print_string is part of the standard input-output library\n
 T_WHITESPACE 
 T_ID print_string
 T_LPAREN (
+T_STRINGCONSTANT ""

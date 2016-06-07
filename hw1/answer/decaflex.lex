@@ -1,10 +1,10 @@
 %{
 /*
- * Author      : Zheyang Li 
+ * Author      : Zheyang Li
  * Date Created: 05-26-2016
- * Date Edited : 05-30-2016
+ * Date Edited : 06-06-2016
  * Deadline    : 06-06-2016
- * Description : lex analyzer for Decaf language 
+ * Description : lex analyzer for Decaf language
  */
 
 #include <iostream>
@@ -28,35 +28,35 @@
 #define T_FOR          16
 #define T_WHILE        17
 #define T_RETURN       18
-#define T_LCB          19 
-#define T_RCB          20 
-#define T_LPAREN       21 
-#define T_RPAREN       22 
-#define T_LSB          23 
-#define T_RSB          24 
-#define T_COMMA        25 
-#define T_SEMICOLON    26 
-#define T_EQ           27 
-#define T_LEQ          28 
-#define T_GEQ          29 
-#define T_NEQ          30 
-#define T_LEFTSHIFT    31 
-#define T_RIGHTSHIFT   32 
-#define T_AND          33 
-#define T_OR           34 
-#define T_PLUS         35 
-#define T_MINUS        36 
-#define T_MULT         37 
-#define T_DIV          38 
-#define T_NOT          39  
-#define T_ASSIGN       40 
-#define T_LT           41 
-#define T_RT           42 
-#define T_MOD          43 
-#define T_DOT          44 
-#define T_INTCONSTANT    45 
-#define T_CHARCONSTANT   46 
-#define T_STRINGCONSTANT 47 
+#define T_LCB          19
+#define T_RCB          20
+#define T_LPAREN       21
+#define T_RPAREN       22
+#define T_LSB          23
+#define T_RSB          24
+#define T_COMMA        25
+#define T_SEMICOLON    26
+#define T_EQ           27
+#define T_LEQ          28
+#define T_GEQ          29
+#define T_NEQ          30
+#define T_LEFTSHIFT    31
+#define T_RIGHTSHIFT   32
+#define T_AND          33
+#define T_OR           34
+#define T_PLUS         35
+#define T_MINUS        36
+#define T_MULT         37
+#define T_DIV          38
+#define T_NOT          39
+#define T_ASSIGN       40
+#define T_LT           41
+#define T_RT           42
+#define T_MOD          43
+#define T_DOT          44
+#define T_INTCONSTANT    45
+#define T_CHARCONSTANT   46
+#define T_STRINGCONSTANT 47
 #define T_ID           48
 #define T_WHITESPACE   49
 #define T_COMMENT      50
@@ -66,8 +66,6 @@
 #define T_ERROR_3      53
 
 using namespace std;
-
-int current_line = 1;
 %}
 
   /* regular expression */
@@ -80,20 +78,20 @@ char_lit      [\a\b\h\v\f\r -\[\]-~]|\\(n|r|t|v|f|a|b|\\|\'|\")
 
 %%
   /*
-    Pattern definitions for all tokens 
+    Pattern definitions for all tokens
   */
 
  /*
-  *  Note: 
-  *   1. maximal munch 
-  *   2. choose the one listed first if there is a conflict 
-  *   3. consider also that a single whitespace token could have multiple newlines    
+  *  Note:
+  *   1. maximal munch
+  *   2. choose the one listed first if there is a conflict
+  *   3. consider also that a single whitespace token could have multiple newlines
   */
 
 
-  
+
   /*  Keywords (18 of them) */
-   
+
 func                       { return T_FUNC;       }
 package                    { return T_PACKAGE;    }
 var                        { return T_VAR;        }
@@ -108,7 +106,7 @@ extern                     { return T_EXTERN;     }
 true                       { return T_TRUE;       }
 false                      { return T_FALSE;      }
 if                         { return T_IF;         }
-else                       { return T_ELSE;       } 
+else                       { return T_ELSE;       }
 for                        { return T_FOR ;       }
 while                      { return T_WHILE;      }
 return                     { return T_RETURN;     }
@@ -137,22 +135,22 @@ return                     { return T_RETURN;     }
 \-                         { return  T_MINUS;     }
 \*                         { return  T_MULT;      }
 \/                         { return  T_DIV;       }
-\!                         { return  T_NOT;       } 
+\!                         { return  T_NOT;       }
 \=                         { return  T_ASSIGN;    }
 \<                         { return  T_LT;        }
 \>                         { return  T_RT;        }
 \%                         { return  T_MOD;       }
 \.                         { return  T_DOT;       }
 
-  /* Others */ 
+  /* Others */
 
 \/\/([\a|\b|\h|\v|\f|\r| -~]+)\n                               { return  T_COMMENT;        }
 ({decimal_digit}+)|(0(x|X){hex_digit}+)                        { return  T_INTCONSTANT;    }
 \'{char_lit}\'                                                 { return  T_CHARCONSTANT;   }
-\"([\a\b\h\v\f\r -\!\#-\[\]-~]|\\(n|r|t|v|f|a|b|\\|\'|\"))*\"   { return  T_STRINGCONSTANT; }
+\"([\a\b\h\v\f\r -\!\#-\[\]-~]|\\(n|r|t|v|f|a|b|\\|\'|\"))*\"  { return  T_STRINGCONSTANT; }
 
-[a-zA-Z\_][a-zA-Z\_0-9]*   { return  T_ID;        } 
-[\t\r\v\f\n ]+             { return  T_WHITESPACE;}  
+[a-zA-Z\_][a-zA-Z\_0-9]*   { return  T_ID;        }
+[\t\r\v\f\n ]+             { return  T_WHITESPACE;}
 
 
 \'{char_lit}([{char_lit}]+)\'  { return T_ERROR_1; }
@@ -162,26 +160,28 @@ return                     { return T_RETURN;     }
 %%
 
 int main () {
-  int token; 
+  int token;
   string lexeme;
+  int current_line = 1;
+
   while ((token = yylex()))
   {
     //cout<<"token is :"<<token<<endl;
-    if (token > 0) 
+    if (token > 0)
     {
       lexeme.assign(yytext);
-      switch(token) 
+      switch(token)
       {
         case 1: cout << "T_FUNC "            << lexeme << endl; break;
-	case 2: cout << "T_PACKAGE "         << lexeme << endl; break;
-	case 3: cout << "T_VAR "             << lexeme << endl; break;
-	case 4: cout << "T_INTTYPE "         << lexeme << endl; break;
-	case 5: cout << "T_STRINGTYPE "      << lexeme << endl; break;
-	case 6: cout << "T_BOOLTYPE "        << lexeme << endl; break;
-	case 7: cout << "T_VOID "            << lexeme << endl; break;
-	case 8: cout << "T_NULL "            << lexeme << endl; break;
-	case 9: cout << "T_BREAK "           << lexeme << endl; break;
-	case 10: cout << "T_CONTINUE "       << lexeme << endl; break;
+        case 2: cout << "T_PACKAGE "         << lexeme << endl; break;
+        case 3: cout << "T_VAR "             << lexeme << endl; break;
+        case 4: cout << "T_INTTYPE "         << lexeme << endl; break;
+        case 5: cout << "T_STRINGTYPE "      << lexeme << endl; break;
+        case 6: cout << "T_BOOLTYPE "        << lexeme << endl; break;
+        case 7: cout << "T_VOID "            << lexeme << endl; break;
+        case 8: cout << "T_NULL "            << lexeme << endl; break;
+        case 9: cout << "T_BREAK "           << lexeme << endl; break;
+        case 10: cout << "T_CONTINUE "       << lexeme << endl; break;
         case 11: cout << "T_EXTERN "         << lexeme << endl; break;
         case 12: cout << "T_TRUE "           << lexeme << endl; break;
         case 13: cout << "T_FALSE "          << lexeme << endl; break;
@@ -205,27 +205,27 @@ int main () {
         case 31: cout << "T_LEFTSHIFT "      << lexeme << endl; break;
         case 32: cout << "T_RIGHTSHIFT "     << lexeme << endl; break;
         case 33: cout << "T_AND "            << lexeme << endl; break;
-        case 34: cout << "T_OR "             << lexeme << endl; break; 
-        case 35: cout << "T_PLUS "           << lexeme << endl; break;  
-        case 36: cout << "T_MINUS "          << lexeme << endl; break;  
-        case 37: cout << "T_MULT "           << lexeme << endl; break;  
-        case 38: cout << "T_DIV "            << lexeme << endl; break;  
-        case 39: cout << "T_NOT "            << lexeme << endl; break;  
-        case 40: cout << "T_ASSIGN "         << lexeme << endl; break;  
-        case 41: cout << "T_LT "             << lexeme << endl; break;  
-        case 42: cout << "T_RT "             << lexeme << endl; break;  
-        case 43: cout << "T_MOD "            << lexeme << endl; break;  
+        case 34: cout << "T_OR "             << lexeme << endl; break;
+        case 35: cout << "T_PLUS "           << lexeme << endl; break;
+        case 36: cout << "T_MINUS "          << lexeme << endl; break;
+        case 37: cout << "T_MULT "           << lexeme << endl; break;
+        case 38: cout << "T_DIV "            << lexeme << endl; break;
+        case 39: cout << "T_NOT "            << lexeme << endl; break;
+        case 40: cout << "T_ASSIGN "         << lexeme << endl; break;
+        case 41: cout << "T_LT "             << lexeme << endl; break;
+        case 42: cout << "T_RT "             << lexeme << endl; break;
+        case 43: cout << "T_MOD "            << lexeme << endl; break;
         case 44: cout << "T_DOT "            << lexeme << endl; break;
-        case 45: cout << "T_INTCONSTANT "    << lexeme << endl; break;  
-        case 46: cout << "T_CHARCONSTANT "   << lexeme << endl; break;  
-        case 47: cout << "T_STRINGCONSTANT " << lexeme << endl; break;  
-        case 48: cout << "T_ID "             << lexeme << endl; break;  
-        case 49: 
-        {  
+        case 45: cout << "T_INTCONSTANT "    << lexeme << endl; break;
+        case 46: cout << "T_CHARCONSTANT "   << lexeme << endl; break;
+        case 47: cout << "T_STRINGCONSTANT " << lexeme << endl; break;
+        case 48: cout << "T_ID "             << lexeme << endl; break;
+        case 49:
+        {
           cout << "T_WHITESPACE ";
-         
+
           for(int x = 0; x < lexeme.size(); ++x)
-	  {
+          {
             if(lexeme[x] == '\n')
             {
               cout<<"\\n";
@@ -236,46 +236,46 @@ int main () {
           cout << endl;
           break;
         }
-	case 50: 
+        case 50:
         {
-	  cout << "T_COMMENT ";
-          
+	        cout << "T_COMMENT ";
+
           for(int x = 0; x < lexeme.size(); ++x)
-	  { 
+          {
             if(lexeme[x] != '\n')
             {
               cout<<lexeme[x];
-	    }
-	  }
-          
+            }
+          }
+
           cout << "\\n" << endl;
-          current_line++; 
+          current_line++;
           break;
-        }        
+        }
         case 51:
         {
-          cerr << "Error: illegal character at line "   << current_line << "," << yyleng;  
+          cerr << "Error: illegal character at line "   << current_line << "," << yyleng;
           exit(EXIT_FAILURE);
         }
         case 52:
-        { 
-          cerr << "Error: empty unexpected character at line "<< current_line << "," << yyleng;  
+        {
+          cerr << "Error: empty unexpected character at line "<< current_line << "," << yyleng;
           exit(EXIT_FAILURE);
         }
         case 53:
-        { 
-          cerr << "Error: unexpected unexpected character at line "<< current_line << "," << yyleng;  
+        {
+          cerr << "Error: unexpected unexpected character at line "<< current_line << "," << yyleng;
           exit(EXIT_FAILURE);
         }
-        default: 
+        default:
         {
           exit(EXIT_FAILURE);
-	}
+        }
       }
-    } 
-    else 
+    }
+    else
     {
-      if (token < 0) 
+      if (token < 0)
       {
         exit(EXIT_FAILURE);
       }
