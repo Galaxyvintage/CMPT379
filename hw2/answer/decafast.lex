@@ -39,7 +39,7 @@ char_lit      [\a\b\h\v\f\r -\[\]-~]|\\(n|r|t|v|f|a|b|\\|\'|\")
   /*  Keywords (18 of them) */
 
 func                       { return T_FUNC;       }
-package                    {  return T_PACKAGE;    }
+package                    { return T_PACKAGE;    }
 var                        { return T_VAR;        }
 int                        { return T_INTTYPE;    }
 string                     { return T_STRINGTYPE; }
@@ -91,9 +91,19 @@ return                     { return T_RETURN;     }
   /* Others */
 
 \/\/([\a|\b|\h|\v|\f|\r| -~]+)\n                               { return  T_COMMENT;        }
-({decimal_digit}+)|(0(x|X){hex_digit}+)                        { return  T_INTCONSTANT;    }
-\'{char_lit}\'                                                 { return  T_CHARCONSTANT;   }
-\"([\a\b\h\v\f\r -\!\#-\[\]-~]|\\(n|r|t|v|f|a|b|\\|\'|\"))*\"  { return  T_STRINGCONSTANT; }
+({decimal_digit}+)|(0(x|X){hex_digit}+)                        { 
+                                                                 yylval.sval = new string(yytext);
+                                                                 return  T_INTCONSTANT; 
+                                                               }
+\'{char_lit}\'                                                 {  
+                                                                 yylval.sval = new string(yytext);
+                                                                 return  T_CHARCONSTANT;  
+                                                               }
+
+\"([\a\b\h\v\f\r -\!\#-\[\]-~]|\\(n|r|t|v|f|a|b|\\|\'|\"))*\"  {
+                                                                 yylval.sval = new string(yytext);
+                                                                 return  T_STRINGCONSTANT; 
+                                                               }
 
 [a-zA-Z\_][a-zA-Z\_0-9]*   {
                              yylval.sval = new string(yytext); 

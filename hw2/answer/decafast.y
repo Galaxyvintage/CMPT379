@@ -14,6 +14,7 @@ bool printAST = true;
 #include "decafast.cc"
 
 using namespace std;
+
 %}
 
 %union
@@ -22,6 +23,8 @@ using namespace std;
   std::string *sval;
   std::deque<string> *deque_ptr;
   int  ival;
+  array_info arrinfo;
+
 }
 
 %token T_FUNC
@@ -35,8 +38,8 @@ using namespace std;
 %token T_BREAK 
 %token T_CONTINUE 
 %token T_EXTERN 
-%token T_TRUE
-%token T_FALSE
+%token <sval> T_TRUE
+%token <sval> T_FALSE
 %token T_IF 
 %token T_ELSE
 %token T_FOR 
@@ -73,10 +76,9 @@ using namespace std;
 %token T_DOT
 
 %token T_COMMENT
-%token T_INTCONSTANT
-%token T_CHARCONSTANT
-%token T_STRINGCONSTANT
-%token T_BOOLCONSTANT
+%token <sval> T_INTCONSTANT
+%token <sval> T_CHARCONSTANT
+%token <sval> T_STRINGCONSTANT
 %token <sval> T_ID
 %token T_WHITESPACE
 %token T_UNARYMINUS
@@ -84,128 +86,334 @@ using namespace std;
 %token T_ERROR_2
 %token T_ERROR_3
 
-%type <ast> extern_list decafpackage field_decls field_decl
-%type <deque_ptr> id_comma_list
-%type <ival> decaf_type
+%type <ast> extern_list extern_def extern_type_comma_list decafpackage
+
+%type <ast> field_decls field_decl 
+
+%type <ast> method_decls method_decl param_list id_type_comma_list
+ 
+%type <ast> block var_decls var_decl
+
+%type <ast> statements statement
+
+%type <ast> expr rvalue constant method_call method_arg_list
+
+%type <deque_ptr> id_comma_list 
+
+%type <sval> extern_type decaf_type method_type binary_op arithmatic_op boolean_op bool_constant
+
+%type <arrinfo> array_type
+
 %%
 
 /* start */
 start: program
 
 program: extern_list decafpackage
-   { 
-    ProgramAST *prog = new ProgramAST((decafStmtList *)$1, (PackageAST *)$2); 
-    if (printAST) 
-    {
-      cout << getString(prog) << endl;
-    }
-    delete prog;
-  }
-  ;
+       { 
+         ProgramAST *prog = new ProgramAST((decafStmtList *)$1, (PackageAST *)$2); 
+         if (printAST) 
+         {
+           cout << getString(prog) << endl;
+         }
+         delete prog;
+       }
+       ;
+
 extern_list: /* extern_list can be empty */
-{ decafStmtList *slist = new decafStmtList(); $$ = slist; }
-  ;
+           { $$ = NULL; }
+           | extern_def extern_list
+           {
+             decafStmtList* slist;
+	     if($2 == NULL)
+	     {
+	       slist = new decafStmtList();
+             }
+             else
+	     {
+               slist = (decafStmtList*)$2;
+	     }
+	     slist->push_front($1);
+             $$ = slist;
+	   }  
+           ;
+
+extern_def: T_EXTERN T_FUNC T_ID T_LPAREN extern_type_comma_list T_RPAREN method_type T_SEMICOLON
+          {
+            ExternAST* e = new ExternAST(*$3, (decafStmtList*)$5, *$7);
+             $$ = e;
+             delete $3;
+             delete $7;
+          }        
+          ;
+extern_type_comma_list: extern_type T_COMMA extern_type_comma_list
+                      {
+                        decafStmtList* slist = (decafStmtList*)$3;
+                        VarDefAST* e = new VarDefAST(string(""), *$1);
+                        slist->push_front(e);
+                        $$ = slist;
+                        delete $1;
+                      } 
+                      | extern_type
+                      {
+  
+                        decafStmtList* slist = new decafStmtList();
+                        VarDefAST* e = new VarDefAST(string(""),*$1);
+                        slist->push_front(e);
+                        $$ = slist;
+                        delete $1;     
+		      }
+                      ;
+
 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls T_RCB
-{ 
-  $$ = new PackageAST(*$2, (decafStmtList*)$4, new decafStmtList()); 
-  delete $2; 
-}
-  ;
+            { 
+              $$ = new PackageAST(*$2, (decafStmtList*)$4, (decafStmtList*)$5 ); 
+              delete $2; 
+            }
+            ;
 
 field_decls: /* Empty(zero or more) */
-{ $$ = NULL; }
+           { $$ = NULL; }
            | field_decl field_decls 
-{
-  decafStmtList* slist;
-  decafStmtList* p;
-  decafStmtList* q;
-  p = (decafStmtList*)$1;
-  if( $2 == NULL )
-  { 
-    slist = p;
-  }   
-  
-  else // if( $2 != nullptr )
-  {
-    q = (decafStmtList*)$2;
-    int size = p->size();
-    for(int x = 0; x < size; x++)
-    { q->push_front(p->pop_back());}
-    slist = q;
-    delete p;
-  }
-  $$ = slist;
-}                
-  ;
+           {  
+             decafStmtList* slist;
+             if($2 == NULL)
+	     {
+               slist = new decafStmtList();
+	     }
+             else
+	     {
+               slist = (decafStmtList*)$2;
+	     }
+             slist->push_front($1);
+             $$ = slist;
+           }                     
+           ;
 field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON   
-{ 
-  decafStmtList* slist = new decafStmtList();
-  string FieldType;
-  FieldAST* e;
+            { 
+              decafStmtList* slist = new decafStmtList();
+              FieldAST* e;
   
-  //cout<<"decaf_type:"<<$3<<endl;;
-  if($3 == 0)
-  {
-    FieldType = string("IntType");
-  }
-  else
-  {
-    FieldType = string("BoolType");
-  }
-  for(int x = 0; x < $2->size(); ++x)
-  {
-    e = new FieldAST((*$2)[x],FieldType,"Scalar");
-    slist->push_back(e);
-  }    
-  $$ = slist;
-  delete $2;
-} 
-            // | T_VAR id_comma_list array_type T_SEMICOLON  
-            // | T_VAR id_comma_list decaf_type T_ASSIGN constant T_SEMICOLON 
+              for(int x = 0; x < $2->size(); ++x)
+              {
+                e = new FieldAST((*$2)[x],*$3,"Scalar");
+                slist->push_back(e);
+              }    
+  
+              delete $2;
+              delete $3;
+              $$ = slist; 
+            } 
+
+          | T_VAR id_comma_list array_type T_SEMICOLON  
+            {
+              decafStmtList* slist = new decafStmtList();
+              string FieldType;
+              string FieldSize; 
+              FieldAST* e;
+               
+              FieldType = *($3.type);
+               
+              FieldSize = string("Array(") + *($3.size) + ")";
+
+              for(int x = 0; x < $2->size(); ++x)
+              {
+                e = new FieldAST((*$2)[x],FieldType, FieldSize);
+                slist->push_back(e);
+              }    
+
+              delete $2; 
+              delete $3.type;
+              delete $3.size;
+              $$ = slist;
+	    }
+
+	    | T_VAR id_comma_list decaf_type T_ASSIGN expr T_SEMICOLON
+	    {
+              decafStmtList* slist = new decafStmtList();
+              FieldAST* e;
+  
+              for(int x = 0; x < $2->size(); ++x)
+              {
+                
+                e = new FieldAST((*$2)[x],*$3,(ConstantAST*)$5);
+                e->setAssignment(true);
+                slist->push_back(e);
+              }    
+  
+              delete $2;
+              delete $3;
+              $$ = slist; 
+            }
   ;
 id_comma_list: T_ID T_COMMA id_comma_list
 {
-  //cout<<"T_ID is"<<*$1<<endl;
   deque<string>* ilist = $3;
   ilist->push_front(*$1);
   delete $1;
   $$ = ilist;
 }
-             | T_ID   
+              | T_ID   
 {
-  //cout<<"T_ID is"<<*$1<<endl;
   deque<string>* ilist = new deque<string>;
   ilist->push_front(*$1);
   delete $1;
   $$ = ilist; 
 }          
   ;   
-argument_list: /* Empty(zero or more) */
-             | id_type_comma_list 
-  ;
-id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list
-                  | T_ID decaf_type
-  ;
 method_decls: /* Empty(zero or more) */
+            { $$ = NULL; }
             | method_decl method_decls
+            {
+              decafStmtList* slist;
+              if($2 == NULL)
+              {
+                slist = new decafStmtList();
+	      }
+              else
+              {
+                slist = (decafStmtList*)$2;
+	      }
+           
+              slist->push_front($1);
+              $$ = slist;
+            }                     
+            ;
+method_decl: T_FUNC T_ID T_LPAREN param_list T_RPAREN method_type block
+            { 
+              decafStmtList* slist = new decafStmtList();
+              decafStmtList* q;
+
+              string MethodType;
+              MethodAST* e;
+              MethodType = *$6;
+              
+              ((BlockAST*)$7)->setMethodBlock(true);
+                 
+              e = new MethodAST((*$2),MethodType,
+                                (decafStmtList*)$4, 
+                                (BlockAST*)$7);
+
+              slist->push_back(e);
+               
+              delete $2;  // free T_OD
+              delete $6;  // free method_type
+              $$ = slist; 
+            } 
+            ;
+param_list: /* Empty(zero or more) */
+             { $$ = NULL; }
+             | id_type_comma_list 
+             { $$ = $1; }
+  ;           
+id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list
+                  {
+		    VarDefAST* e;
+                    e = new VarDefAST(*$1,*$2);
+                    ((decafStmtList*)$4)->push_front(e);
+
+                    $$ = $4;
+                    delete $1;
+                    delete $2;
+                  }
+                  | T_ID decaf_type
+                  {
+                    decafStmtList* slist = new decafStmtList();
+                    VarDefAST* e;
+
+                    e = new VarDefAST(*$1, *$2);
+                      
+                    slist->push_front(e);
+
+                    delete $1; // free T_ID string 
+                    delete $2; // free decaf_type string 
+                    $$ = slist;
+                  }  
   ;
-method_decl: T_FUNC T_ID T_LCB argument_list T_RCB method_type block
+block: T_LCB var_decls statements T_RCB
+     {   
+       BlockAST* e;
+       e = new BlockAST((decafStmtList*)$2,(decafStmtList*)$3);
+       $$ = e;
+     }
+
   ;
 var_decls: /* Empty(zero or more) */
+         { $$ = NULL;}
          | var_decl var_decls 
-  ;
-var_decl: T_VAR id_comma_list decaf_type T_SEMICOLON 
-  ;
-block: T_LCB var_decls T_RCB
+         {     
+           decafStmtList* slist;
+           if( $2 == NULL )
+           {
+             slist = (decafStmtList*)$1;
+           }   
+           else // if( $2 != nullptr )
+           { 
+             // merge p into the front of q
+          
+             decafStmtList* p = (decafStmtList*)$1;
+             decafStmtList* q = (decafStmtList*)$2;
+            
+             int size = p->size();
+             decafAST* e; 
+      
+             for(int x = 0; x < size; x++)
+             { 
+               e = p->pop_back();   
+               q->push_front(e);
+             }
+               
+             slist = q;
+
+             /* free p that is returned from previous  var_decl */              
+             delete p;
+           }
+
+           $$ = slist;
+         }        
+         ;
+var_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
+        {
+          decafStmtList* slist = new decafStmtList();
+          VarDefAST* e;
+           
+          for(int x = 0; x < $2->size(); ++x)
+	  {
+            e = new VarDefAST((*$2)[x], *$3);
+            slist->push_back(e);
+	  }
+
+          delete $2;
+          delete $3;
+          $$ = slist;
+        }   
   ;
 
-/*
 statements: // Empty(zero or more)  
-          | statement statements 
-  ;
+         { $$ = NULL; } 
+         | statement statements 
+         { 
+           decafStmtList* slist;
+           if($2 == NULL)
+           {
+             slist = new decafStmtList();
+	   }
+           else
+           {
+             slist = (decafStmtList*)$2;
+	   }
+           
+           slist->push_front($1);
+           $$ = slist;
+         }
+         ;
 statement: block
-         | assign T_SEMICOLON
+         { $$ = $1;}
          | method_call T_SEMICOLON
+         { $$ = $1;}
+         ;
+/*
+         | assign T_SEMICOLON
          | if_stmt T_SEMICOLON
          | while_stmt T_SEMICOLON
          | for_stmt T_SEMICOLON
@@ -213,8 +421,7 @@ statement: block
          | break_stmt T_SEMICOLON
          | continue_stmt T_SEMICOLON
   ; 
-block: T_LCB var_decls statements T_RCB
-  ;
+
 assign: lvalue T_EQ expr  
   ;
 lvalue: T_ID 
@@ -251,60 +458,156 @@ break_stmt: T_BREAK
   ;
 continue_stmt: T_CONTINUE 
   ;
-expr: T_ID
+
+*/
+
+expr: rvalue
+    {
+      $$ = $1; // RValueAST*
+    } 
     | method_call
-    | constant 
+    {
+      $$ = $1; // MethodCallAST*
+    }
+    | constant  
+    {
+      $$ = $1; // ConstantAST*
+    }
     | expr binary_op expr
-    | unary_op expr
+    {
+      BinaryExprAST* e = new BinaryExprAST(*$2, (decafStmtList*)$1, (decafStmtList*)$3);
+      delete $2;
+      $$ = e;
+    } 
+    //| unary_op expr
     | T_LPAREN expr T_RPAREN  
-    | T_ID T_LSB expr T_RSB
-  ;   
+    { $$ = $2; }
+    ;
+
+rvalue: T_ID 
+      { 
+        RValueAST* e = new RValueAST(*$1);
+        delete $1;
+        $$ = e;
+      }   
+      | T_ID T_LSB expr T_RSB
+      {         
+        RValueAST* e = new RValueAST(*$1, (decafStmtList*) $3);
+        delete $1;
+        $$ = e;
+      }
+   
+method_call: T_ID T_LPAREN method_arg_list T_RPAREN
+           {
+             MethodCallAST* e;
+             $$ = new MethodCallAST(*$1, $3);
+             delete $1;
+           }  
+           ;
+method_arg_list: T_STRINGCONSTANT
+               {
+                 $$ = new ConstantAST("StringType",*$1);
+                 delete $1;
+               }
+               | expr
+               { $$ = $1; }
+               ;
 binary_op: arithmatic_op
-         | boolean_op
+	   // | boolean_op
   ;
 arithmatic_op: T_PLUS
+{ $$ = new string("Plus");} 
              | T_MINUS
-             | T_MULT
+{ $$ = new string("Minus");}
+             | T_MULT 
+{ $$ = new string("Mult");}
              | T_DIV
+{ $$ = new string("Div");}
              | T_LEFTSHIFT
+{ $$ = new string("LeftShift");}
              | T_RIGHTSHIFT
+{ $$ = new string("Rightshift");}
              | T_MOD
+{ $$ = new string("Mod");}
   ;
+
 boolean_op: T_EQ
+{ $$ = new string("Eq");}
           | T_NEQ
+{ $$ = new string("Neq");}
           | T_LT
+{ $$ = new string("Lt");}
           | T_LEQ
+{ $$ = new string("Leq");}
           | T_RT
+{ $$ = new string("Gt");}
           | T_GEQ
+{ $$ = new string("Geq");}
           | T_AND
+{ $$ = new string("And");}
           | T_OR
+{ $$ = new string("Or");}
   ;
+
+/*
 unary_op: T_UNARYMINUS
         | T_NOT  
   ;
 */
+
 constant: T_INTCONSTANT 
+        {
+          $$ = new ConstantAST(string("IntTyoe"), *$1);
+          delete $1;
+        } 
         | T_CHARCONSTANT
-        | T_BOOLCONSTANT
-  ;
+        {
+          $$ = new ConstantAST(string("IntType"), *$1);
+          delete $1;
+	}
+        | bool_constant
+        {
+          $$ = new ConstantAST(string("BoolType"), *$1);
+	  delete $1;
+        }
+        ;
+
+bool_constant: T_TRUE 
+             { $$ = new string("True"); }
+             | T_FALSE
+             { $$ = new string("False"); }
+             ;
 decaf_type: T_INTTYPE
 {  
    //cout<<"int here"<<endl;
-   $$ = 0;
+  $$ = new string("IntType");
  }     
           | T_BOOLTYPE
 {
   //cout<<"bool here"<<endl; 
-  $$ = 1; 
+  $$ = new string("BoolType"); 
 }
   ;
 array_type: T_LSB T_INTCONSTANT T_RSB decaf_type
-  ;
-method_type: T_VOID | decaf_type
-  ;
-extern_type: T_STRINGTYPE | decaf_type
-  ;
-
+{
+  array_info info;
+  info.type = $4;
+  info.size = $2;
+  
+  //cout<<"array_type address"<< &info<<endl;
+  $$ = info;
+}
+;
+method_type: T_VOID
+           { $$ = new string("VoidType");}   
+           | decaf_type
+           { $$ = $1; }
+           ;
+extern_type: T_STRINGTYPE 
+           { $$ = new string("StringType");}
+           | decaf_type
+           { $$ = $1;}
+           ;
 %%  
 
 int main()
