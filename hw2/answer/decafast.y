@@ -144,7 +144,14 @@ extern_def: T_EXTERN T_FUNC T_ID T_LPAREN extern_type_comma_list T_RPAREN method
              $$ = e;
              delete $3;
              delete $7;
-          }        
+          }      
+          | T_EXTERN T_FUNC T_ID T_LPAREN T_VOID T_RPAREN method_type T_SEMICOLON
+	  {
+            ExternAST* e = new ExternAST(*$3, NULL, *$7); // no argument 
+            $$ = e;
+            delete $3;
+            delete $7;
+	  }  
           ;
 extern_type_comma_list: extern_type T_COMMA extern_type_comma_list
                       {
@@ -561,8 +568,9 @@ constant: T_INTCONSTANT
           delete $1;
         } 
         | T_CHARCONSTANT
-        {
-          $$ = new ConstantAST(string("IntType"), *$1);
+        { 
+          
+          $$ = new ConstantAST(string("IntType"), char_to_ascii_string(*$1));
           delete $1;
 	}
         | bool_constant

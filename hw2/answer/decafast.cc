@@ -21,6 +21,52 @@ public:
   virtual string str() { return string(""); }
 };
 
+string char_to_ascii_string(string str)
+{
+  if(str.empty())
+  {
+    return str;
+  }
+  
+  // str[0] the single quote character '
+  // str[1] could be the character or backslash
+  
+  stringstream ss;
+  int ascii = 0;
+
+  // if the character is not an escaped character 
+  // then str[1] is the character 
+  if(str[1] != '\\')
+  {
+    //cout<<"str[1] "<<str[1]<<endl;
+    ascii = int(str[1]);
+  } 
+  // if the character is an escaped character with backslash
+  // then str[2] is the character
+  else
+  {
+    // cout<<"str[2] "<<str[2]<<endl;
+    switch(str[2])
+    {
+     
+    case 'a': ascii = 7; break;
+    case 'b': ascii = 8; break;
+    case 't': ascii = 9; break;
+    case 'n': ascii = 10; break;
+    case 'v': ascii = 11; break;
+    case 'f': ascii = 12; break;
+    case 'r': ascii = 13; break;
+    case '\\': ascii = 92; break;
+    case '\'': ascii = 39; break;
+    case '\"': ascii = 34; break;
+    }
+  }
+  //cout<<"ascii: "<<ascii<<endl;
+  ss << ascii;
+  //cout<<"ss.str(): "<<ss.str()<<endl;
+  return string(ss.str());
+}
+
 string getString(decafAST *d) 
 {
   if (d != NULL) 
@@ -50,7 +96,6 @@ string commaList(list<T> vec)
    
   return s;
 }
-
 
 /// decafStmtList - List of Decaf statements
 class decafStmtList : public decafAST {
@@ -124,7 +169,7 @@ public:
   }
 };
 
-/// ProgramAST - the decaf program
+// ProgramAST - the decaf program
 class ProgramAST : public decafAST 
 {
   decafStmtList *ExternList;
@@ -163,7 +208,7 @@ public:
     string Name;
     if(Type == string("IntType"))
     {
-      Name = string("NumExpr");
+      Name = string("NumberExpr");
     }
     else if(Type == string("StringType"))
     {
@@ -268,7 +313,7 @@ public:
 
   string str()
   {
-    return string("MethodDecl") 
+    return string("Method") 
                   + "(" 
                   + Name + "," + MethodType + "," + getString(ArgList) + "," + getString(Block)
                   + ")";
@@ -287,7 +332,11 @@ public:
   
   string str()
   {
-    if(Name.empty())
+    if(VarType == "VoidType")
+    {
+      return string(""); // no argument       
+    }
+    else if( Name.empty())
     {
       return string("VarDef") + "(" + VarType + ")";
     }

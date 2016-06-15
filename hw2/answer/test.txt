@@ -1,4 +1,4 @@
-extern func print_string(string) void;
+extern func print_string(void) void;
 extern func print_int(int) void;
 
 package foo{
