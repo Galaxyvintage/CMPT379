@@ -262,7 +262,6 @@ public:
 
 class BlockAST : public decafAST
 {
-  string Name;
   decafStmtList* VarDeclList;
   decafStmtList*  StmtList;
   bool MethodBlock;
@@ -283,6 +282,7 @@ public:
   
   string str()
   {
+    string Name;
     if(MethodBlock == true)
     {
       Name = string("MethodBlock");
@@ -367,29 +367,75 @@ public:
   }
 };
 
-class RValueAST : public decafAST
+class ValueAST : public decafAST
 {
   string Name;
-  decafStmtList* Index;
-  bool isArray;
+  decafStmtList* IndexExpr;
+  bool ArrayFlag;
 
 public: 
-  RValueAST(string name) : Name(name), isArray(false) {}
-  RValueAST(string name, decafStmtList* index) : Name(name), Index(index), isArray(true){}
-  ~RValueAST(){}
+  ValueAST(string name) : Name(name), ArrayFlag(false) {}
+  ValueAST(string name, decafStmtList* index) : Name(name), IndexExpr(index), ArrayFlag(true){}
+  ~ValueAST(){}
    
-  string Str()
+  string getID()
+  { 
+    return Name;
+  }  
+  
+  decafStmtList* getIndexExpr()
   {
-    if(isArray == false)
+    return IndexExpr;
+  }
+	
+  bool isArray()
+  {
+    return ArrayFlag;
+  }	
+	   
+  string str()
+  {
+    if(ArrayFlag == false)
     {
       return string("VariableExpr") + "(" + Name + ")";
     } 
     else
     {
-      return string("ArrayLocExpr") + "(" + Name + "," + getString(Index) + "," +")";
+      return string("ArrayLocExpr") + "(" + Name + "," + getString(IndexExpr) + "," +")";
     }  
   }
 };  
+
+class AssignAST : public decafAST
+{
+  ValueAST* Value;
+  decafAST* Expr;
+   
+public: 
+  AssignAST(ValueAST* value, decafAST* expr) : Value(value), Expr(expr){}
+  ~AssignAST()
+  {
+    if(Value != NULL) { delete Value; }
+    if(Expr  != NULL) { delete Expr;  }
+  }
+  
+  string str()
+  {
+    string Name;
+    if(!(Value->isArray()))
+    {
+      Name = string("AssignVar");
+      return Name + "(" + Value->getID() + "," + getString(Expr) + ")";
+    }
+    else
+    {
+      Name = string("AssignArrayLoc");
+      return Name + "(" + Value->getID() + "," + getString(Value->getIndexExpr()) + ","+ getString(Expr) + ")";
+    } 
+  }
+};
+
+
 
 class BinaryExprAST : public decafAST
 {
@@ -406,7 +452,7 @@ public:
      if(RightValue != NULL) { delete RightValue; }
    }
 
-  string Str()
+  string str()
   {
     return string("BinaryExpr") + "(" + BinaryOp + "," + getString(LeftValue) + "," + getString(RightValue) + ")";
   }

@@ -22,7 +22,7 @@ using namespace std;
   class decafAST *ast;
   std::string *sval;
   std::deque<string> *deque_ptr;
-  int  ival;
+  int ival;
   array_info arrinfo;
 
 }
@@ -96,7 +96,7 @@ using namespace std;
 
 %type <ast> statements statement
 
-%type <ast> expr rvalue constant method_call method_arg_list
+%type <ast> expr value constant assign method_call method_arg_list
 
 %type <deque_ptr> id_comma_list 
 
@@ -163,7 +163,6 @@ extern_type_comma_list: extern_type T_COMMA extern_type_comma_list
                       } 
                       | extern_type
                       {
-  
                         decafStmtList* slist = new decafStmtList();
                         VarDefAST* e = new VarDefAST(string(""),*$1);
                         slist->push_front(e);
@@ -182,7 +181,7 @@ decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls T_RCB
 field_decls: /* Empty(zero or more) */
            { $$ = NULL; }
            | field_decl field_decls 
-           {  
+           {            
              decafStmtList* slist;
              if($2 == NULL)
 	     {
@@ -192,6 +191,7 @@ field_decls: /* Empty(zero or more) */
 	     {
                slist = (decafStmtList*)$2;
 	     }
+
              slist->push_front($1);
              $$ = slist;
            }                     
@@ -220,7 +220,6 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
               FieldAST* e;
                
               FieldType = *($3.type);
-               
               FieldSize = string("Array(") + *($3.size) + ")";
 
               for(int x = 0; x < $2->size(); ++x)
@@ -234,15 +233,13 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
               delete $3.size;
               $$ = slist;
 	    }
-
 	    | T_VAR id_comma_list decaf_type T_ASSIGN expr T_SEMICOLON
 	    {
               decafStmtList* slist = new decafStmtList();
               FieldAST* e;
   
               for(int x = 0; x < $2->size(); ++x)
-              {
-                
+              {    
                 e = new FieldAST((*$2)[x],*$3,(ConstantAST*)$5);
                 e->setAssignment(true);
                 slist->push_back(e);
@@ -348,34 +345,17 @@ block: T_LCB var_decls statements T_RCB
 var_decls: /* Empty(zero or more) */
          { $$ = NULL;}
          | var_decl var_decls 
-         {     
+         {    
            decafStmtList* slist;
            if( $2 == NULL )
            {
-             slist = (decafStmtList*)$1;
+             slist = new decafStmtList();
            }   
            else // if( $2 != nullptr )
            { 
-             // merge p into the front of q
-          
-             decafStmtList* p = (decafStmtList*)$1;
-             decafStmtList* q = (decafStmtList*)$2;
-            
-             int size = p->size();
-             decafAST* e; 
-      
-             for(int x = 0; x < size; x++)
-             { 
-               e = p->pop_back();   
-               q->push_front(e);
-             }
-               
-             slist = q;
-
-             /* free p that is returned from previous  var_decl */              
-             delete p;
+             slist = (decafStmtList*)$2;      
            }
-
+           slist->push_front($1);
            $$ = slist;
          }        
          ;
@@ -415,12 +395,12 @@ statements: // Empty(zero or more)
          }
          ;
 statement: block
-         { $$ = $1;}
-         | method_call T_SEMICOLON
-         { $$ = $1;}
-         ;
-/*
+         { $$ = $1; }
          | assign T_SEMICOLON
+         { $$ = $1; }
+         | method_call T_SEMICOLON
+         { $$ = $1; }
+/*        
          | if_stmt T_SEMICOLON
          | while_stmt T_SEMICOLON
          | for_stmt T_SEMICOLON
@@ -429,21 +409,6 @@ statement: block
          | continue_stmt T_SEMICOLON
   ; 
 
-assign: lvalue T_EQ expr  
-  ;
-lvalue: T_ID 
-      | T_ID T_LSB expr T_RSB
-  ;
-method_call: T_ID T_LPAREN method_arg_list T_RPAREN
-  ;
-method_arg_list: // Empty(zero or more) 
-               | method_arg_comma_list 
-  ;
-method_arg_comma_list: method_arg T_COMMA method_arg_comma_list
-                     | method_arg
-  ; 
-method_arg: expr | T_STRINGCONSTANT
-  ;
 if_stmt: T_IF T_LPAREN expr T_RPAREN block T_ELSE block
        | T_IF T_LPAREN expr T_RPAREN block 
   ;
@@ -467,10 +432,16 @@ continue_stmt: T_CONTINUE
   ;
 
 */
-
-expr: rvalue
+;
+assign: value T_ASSIGN expr  
+  { 
+    AssignAST* e = new AssignAST((ValueAST*)$1,$3);
+    $$ = e;
+  }  
+  ;
+expr: value
     {
-      $$ = $1; // RValueAST*
+      $$ = $1; // ValueAST*
     } 
     | method_call
     {
@@ -483,27 +454,25 @@ expr: rvalue
     | expr binary_op expr
     {
       BinaryExprAST* e = new BinaryExprAST(*$2, (decafStmtList*)$1, (decafStmtList*)$3);
-      delete $2;
       $$ = e;
+      delete $2;
     } 
     //| unary_op expr
     | T_LPAREN expr T_RPAREN  
     { $$ = $2; }
     ;
-
-rvalue: T_ID 
-      { 
-        RValueAST* e = new RValueAST(*$1);
-        delete $1;
-        $$ = e;
-      }   
-      | T_ID T_LSB expr T_RSB
-      {         
-        RValueAST* e = new RValueAST(*$1, (decafStmtList*) $3);
-        delete $1;
-        $$ = e;
-      }
-   
+value: T_ID 
+     { 
+       ValueAST* e = new ValueAST(*$1);
+       delete $1;
+       $$ = e;
+     }   
+     | T_ID T_LSB expr T_RSB
+     {         
+       ValueAST* e = new ValueAST(*$1, (decafStmtList*) $3);
+       delete $1;
+       $$ = e;
+     }
 method_call: T_ID T_LPAREN method_arg_list T_RPAREN
            {
              MethodCallAST* e;
@@ -569,7 +538,6 @@ constant: T_INTCONSTANT
         } 
         | T_CHARCONSTANT
         { 
-          
           $$ = new ConstantAST(string("IntType"), char_to_ascii_string(*$1));
           delete $1;
 	}
@@ -587,12 +555,10 @@ bool_constant: T_TRUE
              ;
 decaf_type: T_INTTYPE
 {  
-   //cout<<"int here"<<endl;
   $$ = new string("IntType");
  }     
           | T_BOOLTYPE
 {
-  //cout<<"bool here"<<endl; 
   $$ = new string("BoolType"); 
 }
   ;
