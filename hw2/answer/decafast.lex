@@ -73,7 +73,7 @@ return                     { return T_RETURN;     }
 \>\=                       { yylval.sval = new string("Geq"); return  T_GEQ;     }
 \!\=                       { yylval.sval = new string("Neq"); return  T_NEQ;     }
 \<\<                       { yylval.sval = new string("Leftshift");  return  T_LEFTSHIFT; }
-\>\>                       { yylval.sval = new string("Leftshift");  return  T_RIGHTSHIFT;}
+\>\>                       { yylval.sval = new string("Rightshift");  return  T_RIGHTSHIFT;}
 \&\&                       { yylval.sval = new string("And");  return  T_AND;   }
 \|\|                       { yylval.sval = new string("Or");    return  T_OR;    }
 

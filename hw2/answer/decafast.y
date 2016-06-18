@@ -90,8 +90,8 @@ using namespace std;
 %left T_AND
 %left T_EQ T_NEQ
 %left T_GEQ T_LEQ T_LT T_RT
-%left T_LEFTSHIFT T_RIGHTSHIFT
 %left T_PLUS T_MINUS 
+%left T_LEFTSHIFT T_RIGHTSHIFT
 %left T_MULT T_DIV T_MOD
 %left T_UMINUS T_UNOT
 
@@ -624,8 +624,6 @@ expr: value
       $$ = e;
       delete $1;
     }
-
-// | unary_op expr
     ;
 value: T_ID T_LSB expr T_RSB
      {         
