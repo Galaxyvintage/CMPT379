@@ -132,9 +132,9 @@ class ExternAST : public decafAST
 public: 
   ExternAST(string name, decafStmtList* elist, string mtype) 
   : Name(name), ExternTypeList(elist), MethodType(mtype){}  
-  ~ExternAST()
+  ~ExternAST()  
   {
-    if(ExternTypeList != NULL) { delete ExternTypeList; }
+     if(ExternTypeList != NULL) { delete ExternTypeList; }
   }
   string str()
   {
@@ -152,16 +152,8 @@ public:
 	    : Name(name), FieldDeclList(fieldlist), MethodDeclList(methodlist) {}
   ~PackageAST() 
   { 
-    if (FieldDeclList  != NULL) 
-    { 
-      //cout<<"releasing FieldDeclList in Package"<<endl;  
-      delete FieldDeclList; 
-    }
-    if (MethodDeclList != NULL)
-    { 
-      //cout<<"releasing MethodDeclList in Package"<<endl; 
-      delete MethodDeclList;
-    }
+    if (FieldDeclList  != NULL) { delete FieldDeclList;  }
+    if (MethodDeclList != NULL) { delete MethodDeclList; }
   }
   string str() 
   { 
@@ -178,21 +170,11 @@ public:
   ProgramAST(decafStmtList *externs, PackageAST *c) : ExternList(externs), PackageDef(c) {}
   ~ProgramAST() 
   { 
-    if (ExternList != NULL) 
-    { 
-      // cout<<"releasing ExternList in Program"<<endl; 
-      delete ExternList;
-    } 
-    if (PackageDef != NULL) 
-    { 
-      //cout<<"releasing PackageDef in Program"<<endl; 
-      delete PackageDef; 
-    }
+    if (ExternList != NULL)  { delete ExternList; } 
+    if (PackageDef != NULL)  { delete PackageDef; }
   }
   string str() { return string("Program") + "(" + getString(ExternList) + "," + getString(PackageDef) + ")"; }
 };
-
-
 
 class ConstantAST : public decafAST
 {
@@ -214,7 +196,7 @@ public:
     {
       Name = string("StringConstant");
     }
-    else if(Type == string("BoolExpr"))
+    else if(Type == string("BoolType"))
     {
       Name = string("BoolExpr");
     }
@@ -231,9 +213,12 @@ class FieldAST : public decafAST
   ConstantAST* AssignExpr;
   bool Assignment;
 public:
+  
+  // Assignment == false 
   FieldAST(string name, string type, string size) 
     : Name(name), FieldType(type), FieldSize(size), Assignment(false), AssignExpr(NULL){}
   
+  // Assignment == true 
   FieldAST(string name, string type, ConstantAST* expr) 
            : Name(name), FieldType(type), AssignExpr(expr), Assignment(true){}
   ~FieldAST()
@@ -336,7 +321,7 @@ public:
     {
       return string(""); // no argument       
     }
-    else if( Name.empty())
+    else if(Name.empty())
     {
       return string("VarDef") + "(" + VarType + ")";
     }
@@ -378,20 +363,9 @@ public:
   ValueAST(string name, decafStmtList* index) : Name(name), IndexExpr(index), ArrayFlag(true){}
   ~ValueAST(){}
    
-  string getID()
-  { 
-    return Name;
-  }  
-  
-  decafStmtList* getIndexExpr()
-  {
-    return IndexExpr;
-  }
-	
-  bool isArray()
-  {
-    return ArrayFlag;
-  }	
+  string getID() { return Name; }  
+  decafStmtList* getIndexExpr() { return IndexExpr; }
+  bool isArray() { return ArrayFlag; }	
 	   
   string str()
   {
@@ -435,7 +409,109 @@ public:
   }
 };
 
+class IfStmtAST : public decafAST
+{
+  decafAST* Condition;
+  BlockAST* IfBlock;
+  BlockAST* ElseBlock;
 
+public: 
+  IfStmtAST(decafAST* condition, BlockAST* if_block, BlockAST* else_block)
+           : Condition(condition), IfBlock(if_block), ElseBlock(else_block){} 
+  ~IfStmtAST()
+  {
+    if(Condition != NULL) { delete Condition; }
+    if(IfBlock   != NULL) { delete IfBlock;   }
+    if(ElseBlock != NULL) { delete ElseBlock; }
+  }  
+
+  string str()
+  {
+    return string("IfStmt") + "(" + getString(Condition) + "," + getString(IfBlock) + "," + getString(ElseBlock) + ")";
+  }
+};
+
+class WhileStmt : public decafAST
+{
+  decafAST* Condition;  
+  BlockAST* WhileBlock;
+
+public:
+  WhileStmt(decafAST* condition, BlockAST* while_block) : Condition(condition), WhileBlock(while_block){}
+  ~WhileStmt()
+  {
+    if(Condition  != NULL) { delete Condition;  }
+    if(WhileBlock != NULL) { delete WhileBlock; }
+  }
+  
+  string str()
+  { 
+    return string("WhileStmt") + "(" + getString(Condition) + "," + getString(WhileBlock) + ")";
+  }
+};
+
+class ForStmtAST : public decafAST
+{
+  AssignAST* PreAssign;
+  decafAST*  Condition;
+  AssignAST* LoopAssign;
+  BlockAST*  ForBlock;
+    
+public:
+  ForStmtAST(AssignAST* pre_assign, decafAST* condition, AssignAST* loop_assign, BlockAST* for_block)
+           : PreAssign(pre_assign), Condition(condition), LoopAssign(loop_assign), ForBlock(for_block){}  
+  ~ForStmtAST()
+  {
+    if(PreAssign  != NULL) { delete PreAssign;  }
+    if(Condition  != NULL) { delete Condition;  }
+    if(LoopAssign != NULL) { delete LoopAssign; }
+    if(ForBlock   != NULL) { delete ForBlock;   }
+  }
+
+  string str()
+  { 
+    return string("ForStmt") + "(" + getString(PreAssign)  + "," 
+                                   + getString(Condition)  + "," 
+                                   + getString(LoopAssign) + "," 
+                                   + getString(ForBlock)   +  ")";
+  }   
+};
+
+class ReturnStmtAST : public decafAST
+{
+  decafAST* Expr;
+   
+public: 
+  ReturnStmtAST(decafAST* expr) : Expr(expr){}
+  ~ReturnStmtAST()
+  {
+    if(Expr != NULL) { delete Expr;}
+  }
+  
+  string str()
+  {
+    return string("ReturnStmt") + "(" + getString(Expr) +")";
+  }
+};
+
+class BreakStmtAST : public decafAST
+{
+public: 
+
+  string str()
+  {
+    return string("BreakStmt");
+  }
+};
+
+class ContinueStmtAST : public decafAST
+{  
+public: 
+  string str()
+  {
+    return string("ContinueStmt");
+  }
+};
 
 class BinaryExprAST : public decafAST
 {
@@ -445,7 +521,7 @@ class BinaryExprAST : public decafAST
 
 public: 
   BinaryExprAST(string op, decafStmtList* left, decafStmtList* right) 
-               :BinaryOp(op), LeftValue(left), RightValue(right){}
+               : BinaryOp(op), LeftValue(left), RightValue(right){}
   ~BinaryExprAST()
    {
      if(LeftValue != NULL)  { delete LeftValue; }

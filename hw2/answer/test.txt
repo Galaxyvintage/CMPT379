@@ -1,17 +1,19 @@
-extern func print_string(void) void;
+extern func print_string(int) void;
 extern func print_int(int) void;
 
 package foo
 {
-  var hello bool;
-  var a,b [100]int;
-  var c bool = true;
- 
-  func displayList(start int, len int) void {
-    var a,c int;
-    var b bool;
-    c = '0';
-    print_string("List:\n");
-   
-  }
+	func main() int
+	{
+	   var x bool;
+	   var y bool;
+	   var z bool;
+           
+           x=(2>=1);
+	   
+           z=x&&y;
+
+	   print_int(z);
+           return;
+	}
 }

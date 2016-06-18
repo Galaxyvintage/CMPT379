@@ -1,51 +1,12 @@
-Nonterminals useless in grammar
-
-   constant
-   array_type
-   extern_type
-
-
 Terminals unused in grammar
 
-   T_STRINGTYPE
    T_NULL
    T_BREAK
    T_CONTINUE
-   T_EXTERN
-   T_TRUE
-   T_FALSE
-   T_IF
-   T_ELSE
-   T_FOR
-   T_WHILE
    T_RETURN
-   T_LPAREN
-   T_RPAREN
-   T_LSB
-   T_RSB
-   T_EQ
-   T_LEQ
-   T_GEQ
-   T_NEQ
-   T_LEFTSHIFT
-   T_RIGHTSHIFT
-   T_AND
-   T_OR
-   T_PLUS
-   T_MINUS
-   T_MULT
-   T_DIV
    T_NOT
-   T_ASSIGN
-   T_LT
-   T_RT
-   T_MOD
    T_DOT
    T_COMMENT
-   T_INTCONSTANT
-   T_CHARCONSTANT
-   T_STRINGCONSTANT
-   T_BOOLCONSTANT
    T_WHITESPACE
    T_UNARYMINUS
    T_ERROR_1
@@ -53,16 +14,7 @@ Terminals unused in grammar
    T_ERROR_3
 
 
-Rules useless in grammar
-
-   25 constant: T_INTCONSTANT
-   26         | T_CHARCONSTANT
-   27         | T_BOOLCONSTANT
-
-   28 array_type: T_LSB T_INTCONSTANT T_RSB decaf_type
-
-   29 extern_type: T_STRINGTYPE
-   30            | decaf_type
+State 99 conflicts: 15 shift/reduce
 
 
 Grammar
@@ -74,544 +26,1837 @@ Grammar
     2 program: extern_list decafpackage
 
     3 extern_list: %empty
+    4            | extern_def extern_list
 
-    4 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls T_RCB
+    5 extern_def: T_EXTERN T_FUNC T_ID T_LPAREN extern_type_comma_list T_RPAREN method_type T_SEMICOLON
+    6           | T_EXTERN T_FUNC T_ID T_LPAREN T_VOID T_RPAREN method_type T_SEMICOLON
 
-    5 field_decls: %empty
-    6            | field_decl field_decls
+    7 extern_type_comma_list: extern_type T_COMMA extern_type_comma_list
+    8                       | extern_type
 
-    7 field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
+    9 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls T_RCB
 
-    8 id_comma_list: T_ID T_COMMA id_comma_list
-    9              | T_ID
+   10 field_decls: %empty
+   11            | field_decl field_decls
 
-   10 argument_list: %empty
-   11              | id_type_comma_list
+   12 field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
+   13           | T_VAR id_comma_list array_type T_SEMICOLON
+   14           | T_VAR id_comma_list decaf_type T_ASSIGN expr T_SEMICOLON
 
-   12 id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list
-   13                   | T_ID decaf_type
+   15 id_comma_list: T_ID T_COMMA id_comma_list
+   16              | T_ID
 
-   14 method_decls: %empty
-   15             | method_decl method_decls
+   17 method_decls: %empty
+   18             | method_decl method_decls
 
-   16 method_decl: T_FUNC T_ID T_LCB argument_list T_RCB method_type block
+   19 method_decl: T_FUNC T_ID T_LPAREN param_list T_RPAREN method_type block
 
-   17 var_decls: %empty
-   18          | var_decl var_decls
+   20 param_list: %empty
+   21           | id_type_comma_list
 
-   19 var_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
+   22 id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list
+   23                   | T_ID decaf_type
 
-   20 block: T_LCB var_decls T_RCB
+   24 block: T_LCB var_decls statements T_RCB
 
-   21 decaf_type: T_INTTYPE
-   22           | T_BOOLTYPE
+   25 var_decls: %empty
+   26          | var_decl var_decls
 
-   23 method_type: T_VOID
-   24            | decaf_type
+   27 var_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
+
+   28 statements: %empty
+   29           | statement statements
+
+   30 statement: block
+   31          | assign
+   32          | method_call
+   33          | if_stmt
+   34          | while_stmt
+   35          | for_stmt
+
+   36 assign: value T_ASSIGN expr T_SEMICOLON
+
+   37 method_call: T_ID T_LPAREN method_arg_list T_RPAREN T_SEMICOLON
+
+   38 if_stmt: T_IF T_LPAREN expr T_RPAREN block
+   39        | T_IF T_LPAREN expr T_RPAREN block T_ELSE block
+
+   40 while_stmt: T_WHILE T_LPAREN expr T_RPAREN block
+
+   41 for_stmt: T_FOR T_LPAREN assign_list T_SEMICOLON expr T_SEMICOLON assign_list T_RPAREN T_SEMICOLON
+
+   42 assign_list: assign T_COMMA assign_list
+   43            | assign
+
+   44 method_arg_list: %empty
+   45                | method_arg_comma_list
+
+   46 method_arg_comma_list: method_arg T_COMMA method_arg_comma_list
+   47                      | method_arg
+
+   48 method_arg: T_STRINGCONSTANT
+   49           | expr
+
+   50 expr: value
+   51     | method_call
+   52     | constant
+   53     | expr binary_op expr
+   54     | T_LPAREN expr T_RPAREN
+
+   55 value: T_ID T_LSB expr T_RSB
+   56      | T_ID
+
+   57 binary_op: T_PLUS
+   58          | T_MINUS
+   59          | T_MULT
+   60          | T_DIV
+   61          | T_LEFTSHIFT
+   62          | T_RIGHTSHIFT
+   63          | T_MOD
+   64          | T_EQ
+   65          | T_NEQ
+   66          | T_LT
+   67          | T_LEQ
+   68          | T_RT
+   69          | T_GEQ
+   70          | T_AND
+   71          | T_OR
+
+   72 constant: T_INTCONSTANT
+   73         | T_CHARCONSTANT
+   74         | bool_constant
+
+   75 bool_constant: T_TRUE
+   76              | T_FALSE
+
+   77 decaf_type: T_INTTYPE
+   78           | T_BOOLTYPE
+
+   79 array_type: T_LSB T_INTCONSTANT T_RSB decaf_type
+
+   80 method_type: T_VOID
+   81            | decaf_type
+
+   82 extern_type: T_STRINGTYPE
+   83            | decaf_type
 
 
 Terminals, with rules where they appear
 
 $end (0) 0
 error (256)
-T_FUNC (258) 16
-T_PACKAGE (259) 4
-T_VAR (260) 7 19
-T_INTTYPE (261) 21
-T_STRINGTYPE (262)
-T_BOOLTYPE (263) 22
-T_VOID (264) 23
+T_FUNC (258) 5 6 19
+T_PACKAGE (259) 9
+T_VAR (260) 12 13 14 27
+T_INTTYPE (261) 77
+T_STRINGTYPE (262) 82
+T_BOOLTYPE (263) 78
+T_VOID (264) 6 80
 T_NULL (265)
 T_BREAK (266)
 T_CONTINUE (267)
-T_EXTERN (268)
-T_TRUE (269)
-T_FALSE (270)
-T_IF (271)
-T_ELSE (272)
-T_FOR (273)
-T_WHILE (274)
+T_EXTERN (268) 5 6
+T_TRUE (269) 75
+T_FALSE (270) 76
+T_IF (271) 38 39
+T_ELSE (272) 39
+T_FOR (273) 41
+T_WHILE (274) 40
 T_RETURN (275)
-T_LCB (276) 4 16 20
-T_RCB (277) 4 16 20
-T_LPAREN (278)
-T_RPAREN (279)
-T_LSB (280)
-T_RSB (281)
-T_COMMA (282) 8 12
-T_SEMICOLON (283) 7 19
-T_EQ (284)
-T_LEQ (285)
-T_GEQ (286)
-T_NEQ (287)
-T_LEFTSHIFT (288)
-T_RIGHTSHIFT (289)
-T_AND (290)
-T_OR (291)
-T_PLUS (292)
-T_MINUS (293)
-T_MULT (294)
-T_DIV (295)
+T_LCB (276) 9 24
+T_RCB (277) 9 24
+T_LPAREN (278) 5 6 19 37 38 39 40 41 54
+T_RPAREN (279) 5 6 19 37 38 39 40 41 54
+T_LSB (280) 55 79
+T_RSB (281) 55 79
+T_COMMA (282) 7 15 22 42 46
+T_SEMICOLON (283) 5 6 12 13 14 27 36 37 41
+T_EQ (284) 64
+T_LEQ (285) 67
+T_GEQ (286) 69
+T_NEQ (287) 65
+T_LEFTSHIFT (288) 61
+T_RIGHTSHIFT (289) 62
+T_AND (290) 70
+T_OR (291) 71
+T_PLUS (292) 57
+T_MINUS (293) 58
+T_MULT (294) 59
+T_DIV (295) 60
 T_NOT (296)
-T_ASSIGN (297)
-T_LT (298)
-T_RT (299)
-T_MOD (300)
+T_ASSIGN (297) 14 36
+T_LT (298) 66
+T_RT (299) 68
+T_MOD (300) 63
 T_DOT (301)
 T_COMMENT (302)
-T_INTCONSTANT (303)
-T_CHARCONSTANT (304)
-T_STRINGCONSTANT (305)
-T_BOOLCONSTANT (306)
-T_ID (307) 4 8 9 12 13 16
-T_WHITESPACE (308)
-T_UNARYMINUS (309)
-T_ERROR_1 (310)
-T_ERROR_2 (311)
-T_ERROR_3 (312)
+T_INTCONSTANT (303) 72 79
+T_CHARCONSTANT (304) 73
+T_STRINGCONSTANT (305) 48
+T_ID (306) 5 6 9 15 16 19 22 23 37 55 56
+T_WHITESPACE (307)
+T_UNARYMINUS (308)
+T_ERROR_1 (309)
+T_ERROR_2 (310)
+T_ERROR_3 (311)
 
 
 Nonterminals, with rules where they appear
 
-$accept (58)
+$accept (57)
     on left: 0
-start (59)
+start (58)
     on left: 1, on right: 0
-program (60)
+program (59)
     on left: 2, on right: 1
-extern_list (61)
-    on left: 3, on right: 2
-decafpackage (62)
-    on left: 4, on right: 2
-field_decls (63)
-    on left: 5 6, on right: 4 6
-field_decl (64)
-    on left: 7, on right: 6
-id_comma_list (65)
-    on left: 8 9, on right: 7 8 19
-argument_list (66)
-    on left: 10 11, on right: 16
-id_type_comma_list (67)
-    on left: 12 13, on right: 11 12
-method_decls (68)
-    on left: 14 15, on right: 4 15
-method_decl (69)
-    on left: 16, on right: 15
-var_decls (70)
-    on left: 17 18, on right: 18 20
-var_decl (71)
+extern_list (60)
+    on left: 3 4, on right: 2 4
+extern_def (61)
+    on left: 5 6, on right: 4
+extern_type_comma_list (62)
+    on left: 7 8, on right: 5 7
+decafpackage (63)
+    on left: 9, on right: 2
+field_decls (64)
+    on left: 10 11, on right: 9 11
+field_decl (65)
+    on left: 12 13 14, on right: 11
+id_comma_list (66)
+    on left: 15 16, on right: 12 13 14 15 27
+method_decls (67)
+    on left: 17 18, on right: 9 18
+method_decl (68)
     on left: 19, on right: 18
-block (72)
-    on left: 20, on right: 16
-decaf_type (73)
-    on left: 21 22, on right: 7 12 13 19 24
-method_type (74)
-    on left: 23 24, on right: 16
+param_list (69)
+    on left: 20 21, on right: 19
+id_type_comma_list (70)
+    on left: 22 23, on right: 21 22
+block (71)
+    on left: 24, on right: 19 30 38 39 40
+var_decls (72)
+    on left: 25 26, on right: 24 26
+var_decl (73)
+    on left: 27, on right: 26
+statements (74)
+    on left: 28 29, on right: 24 29
+statement (75)
+    on left: 30 31 32 33 34 35, on right: 29
+assign (76)
+    on left: 36, on right: 31 42 43
+method_call (77)
+    on left: 37, on right: 32 51
+if_stmt (78)
+    on left: 38 39, on right: 33
+while_stmt (79)
+    on left: 40, on right: 34
+for_stmt (80)
+    on left: 41, on right: 35
+assign_list (81)
+    on left: 42 43, on right: 41 42
+method_arg_list (82)
+    on left: 44 45, on right: 37
+method_arg_comma_list (83)
+    on left: 46 47, on right: 45 46
+method_arg (84)
+    on left: 48 49, on right: 46 47
+expr (85)
+    on left: 50 51 52 53 54, on right: 14 36 38 39 40 41 49 53 54 55
+value (86)
+    on left: 55 56, on right: 36 50
+binary_op (87)
+    on left: 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71, on right:
+    53
+constant (88)
+    on left: 72 73 74, on right: 52
+bool_constant (89)
+    on left: 75 76, on right: 74
+decaf_type (90)
+    on left: 77 78, on right: 12 14 22 23 27 79 81 83
+array_type (91)
+    on left: 79, on right: 13
+method_type (92)
+    on left: 80 81, on right: 5 6 19
+extern_type (93)
+    on left: 82 83, on right: 7 8
 
 
 State 0
 
     0 $accept: . start $end
 
+    T_EXTERN  shift, and go to state 1
+
     $default  reduce using rule 3 (extern_list)
 
-    start        go to state 1
-    program      go to state 2
-    extern_list  go to state 3
+    start        go to state 2
+    program      go to state 3
+    extern_list  go to state 4
+    extern_def   go to state 5
 
 
 State 1
 
-    0 $accept: start . $end
+    5 extern_def: T_EXTERN . T_FUNC T_ID T_LPAREN extern_type_comma_list T_RPAREN method_type T_SEMICOLON
+    6           | T_EXTERN . T_FUNC T_ID T_LPAREN T_VOID T_RPAREN method_type T_SEMICOLON
 
-    $end  shift, and go to state 4
+    T_FUNC  shift, and go to state 6
 
 
 State 2
+
+    0 $accept: start . $end
+
+    $end  shift, and go to state 7
+
+
+State 3
 
     1 start: program .
 
     $default  reduce using rule 1 (start)
 
 
-State 3
+State 4
 
     2 program: extern_list . decafpackage
 
-    T_PACKAGE  shift, and go to state 5
+    T_PACKAGE  shift, and go to state 8
 
-    decafpackage  go to state 6
+    decafpackage  go to state 9
 
 
-State 4
+State 5
+
+    4 extern_list: extern_def . extern_list
+
+    T_EXTERN  shift, and go to state 1
+
+    $default  reduce using rule 3 (extern_list)
+
+    extern_list  go to state 10
+    extern_def   go to state 5
+
+
+State 6
+
+    5 extern_def: T_EXTERN T_FUNC . T_ID T_LPAREN extern_type_comma_list T_RPAREN method_type T_SEMICOLON
+    6           | T_EXTERN T_FUNC . T_ID T_LPAREN T_VOID T_RPAREN method_type T_SEMICOLON
+
+    T_ID  shift, and go to state 11
+
+
+State 7
 
     0 $accept: start $end .
 
     $default  accept
 
 
-State 5
+State 8
 
-    4 decafpackage: T_PACKAGE . T_ID T_LCB field_decls method_decls T_RCB
+    9 decafpackage: T_PACKAGE . T_ID T_LCB field_decls method_decls T_RCB
 
-    T_ID  shift, and go to state 7
+    T_ID  shift, and go to state 12
 
 
-State 6
+State 9
 
     2 program: extern_list decafpackage .
 
     $default  reduce using rule 2 (program)
 
 
-State 7
-
-    4 decafpackage: T_PACKAGE T_ID . T_LCB field_decls method_decls T_RCB
-
-    T_LCB  shift, and go to state 8
-
-
-State 8
-
-    4 decafpackage: T_PACKAGE T_ID T_LCB . field_decls method_decls T_RCB
-
-    T_VAR  shift, and go to state 9
-
-    $default  reduce using rule 5 (field_decls)
-
-    field_decls  go to state 10
-    field_decl   go to state 11
-
-
-State 9
-
-    7 field_decl: T_VAR . id_comma_list decaf_type T_SEMICOLON
-
-    T_ID  shift, and go to state 12
-
-    id_comma_list  go to state 13
-
-
 State 10
 
-    4 decafpackage: T_PACKAGE T_ID T_LCB field_decls . method_decls T_RCB
+    4 extern_list: extern_def extern_list .
 
-    T_FUNC  shift, and go to state 14
-
-    $default  reduce using rule 14 (method_decls)
-
-    method_decls  go to state 15
-    method_decl   go to state 16
+    $default  reduce using rule 4 (extern_list)
 
 
 State 11
 
-    6 field_decls: field_decl . field_decls
+    5 extern_def: T_EXTERN T_FUNC T_ID . T_LPAREN extern_type_comma_list T_RPAREN method_type T_SEMICOLON
+    6           | T_EXTERN T_FUNC T_ID . T_LPAREN T_VOID T_RPAREN method_type T_SEMICOLON
 
-    T_VAR  shift, and go to state 9
-
-    $default  reduce using rule 5 (field_decls)
-
-    field_decls  go to state 17
-    field_decl   go to state 11
+    T_LPAREN  shift, and go to state 13
 
 
 State 12
 
-    8 id_comma_list: T_ID . T_COMMA id_comma_list
-    9              | T_ID .
+    9 decafpackage: T_PACKAGE T_ID . T_LCB field_decls method_decls T_RCB
 
-    T_COMMA  shift, and go to state 18
-
-    $default  reduce using rule 9 (id_comma_list)
+    T_LCB  shift, and go to state 14
 
 
 State 13
 
-    7 field_decl: T_VAR id_comma_list . decaf_type T_SEMICOLON
+    5 extern_def: T_EXTERN T_FUNC T_ID T_LPAREN . extern_type_comma_list T_RPAREN method_type T_SEMICOLON
+    6           | T_EXTERN T_FUNC T_ID T_LPAREN . T_VOID T_RPAREN method_type T_SEMICOLON
 
-    T_INTTYPE   shift, and go to state 19
-    T_BOOLTYPE  shift, and go to state 20
+    T_INTTYPE     shift, and go to state 15
+    T_STRINGTYPE  shift, and go to state 16
+    T_BOOLTYPE    shift, and go to state 17
+    T_VOID        shift, and go to state 18
 
-    decaf_type  go to state 21
+    extern_type_comma_list  go to state 19
+    decaf_type              go to state 20
+    extern_type             go to state 21
 
 
 State 14
 
-   16 method_decl: T_FUNC . T_ID T_LCB argument_list T_RCB method_type block
+    9 decafpackage: T_PACKAGE T_ID T_LCB . field_decls method_decls T_RCB
 
-    T_ID  shift, and go to state 22
+    T_VAR  shift, and go to state 22
+
+    $default  reduce using rule 10 (field_decls)
+
+    field_decls  go to state 23
+    field_decl   go to state 24
 
 
 State 15
 
-    4 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls . T_RCB
+   77 decaf_type: T_INTTYPE .
 
-    T_RCB  shift, and go to state 23
+    $default  reduce using rule 77 (decaf_type)
 
 
 State 16
 
-   15 method_decls: method_decl . method_decls
+   82 extern_type: T_STRINGTYPE .
 
-    T_FUNC  shift, and go to state 14
-
-    $default  reduce using rule 14 (method_decls)
-
-    method_decls  go to state 24
-    method_decl   go to state 16
+    $default  reduce using rule 82 (extern_type)
 
 
 State 17
 
-    6 field_decls: field_decl field_decls .
+   78 decaf_type: T_BOOLTYPE .
 
-    $default  reduce using rule 6 (field_decls)
+    $default  reduce using rule 78 (decaf_type)
 
 
 State 18
 
-    8 id_comma_list: T_ID T_COMMA . id_comma_list
+    6 extern_def: T_EXTERN T_FUNC T_ID T_LPAREN T_VOID . T_RPAREN method_type T_SEMICOLON
 
-    T_ID  shift, and go to state 12
-
-    id_comma_list  go to state 25
+    T_RPAREN  shift, and go to state 25
 
 
 State 19
 
-   21 decaf_type: T_INTTYPE .
+    5 extern_def: T_EXTERN T_FUNC T_ID T_LPAREN extern_type_comma_list . T_RPAREN method_type T_SEMICOLON
 
-    $default  reduce using rule 21 (decaf_type)
+    T_RPAREN  shift, and go to state 26
 
 
 State 20
 
-   22 decaf_type: T_BOOLTYPE .
+   83 extern_type: decaf_type .
 
-    $default  reduce using rule 22 (decaf_type)
+    $default  reduce using rule 83 (extern_type)
 
 
 State 21
 
-    7 field_decl: T_VAR id_comma_list decaf_type . T_SEMICOLON
+    7 extern_type_comma_list: extern_type . T_COMMA extern_type_comma_list
+    8                       | extern_type .
 
-    T_SEMICOLON  shift, and go to state 26
+    T_COMMA  shift, and go to state 27
+
+    $default  reduce using rule 8 (extern_type_comma_list)
 
 
 State 22
 
-   16 method_decl: T_FUNC T_ID . T_LCB argument_list T_RCB method_type block
+   12 field_decl: T_VAR . id_comma_list decaf_type T_SEMICOLON
+   13           | T_VAR . id_comma_list array_type T_SEMICOLON
+   14           | T_VAR . id_comma_list decaf_type T_ASSIGN expr T_SEMICOLON
 
-    T_LCB  shift, and go to state 27
+    T_ID  shift, and go to state 28
+
+    id_comma_list  go to state 29
 
 
 State 23
 
-    4 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls T_RCB .
+    9 decafpackage: T_PACKAGE T_ID T_LCB field_decls . method_decls T_RCB
 
-    $default  reduce using rule 4 (decafpackage)
+    T_FUNC  shift, and go to state 30
+
+    $default  reduce using rule 17 (method_decls)
+
+    method_decls  go to state 31
+    method_decl   go to state 32
 
 
 State 24
 
-   15 method_decls: method_decl method_decls .
+   11 field_decls: field_decl . field_decls
 
-    $default  reduce using rule 15 (method_decls)
+    T_VAR  shift, and go to state 22
+
+    $default  reduce using rule 10 (field_decls)
+
+    field_decls  go to state 33
+    field_decl   go to state 24
 
 
 State 25
 
-    8 id_comma_list: T_ID T_COMMA id_comma_list .
+    6 extern_def: T_EXTERN T_FUNC T_ID T_LPAREN T_VOID T_RPAREN . method_type T_SEMICOLON
 
-    $default  reduce using rule 8 (id_comma_list)
-
-
-State 26
-
-    7 field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON .
-
-    $default  reduce using rule 7 (field_decl)
-
-
-State 27
-
-   16 method_decl: T_FUNC T_ID T_LCB . argument_list T_RCB method_type block
-
-    T_ID  shift, and go to state 28
-
-    $default  reduce using rule 10 (argument_list)
-
-    argument_list       go to state 29
-    id_type_comma_list  go to state 30
-
-
-State 28
-
-   12 id_type_comma_list: T_ID . decaf_type T_COMMA id_type_comma_list
-   13                   | T_ID . decaf_type
-
-    T_INTTYPE   shift, and go to state 19
-    T_BOOLTYPE  shift, and go to state 20
-
-    decaf_type  go to state 31
-
-
-State 29
-
-   16 method_decl: T_FUNC T_ID T_LCB argument_list . T_RCB method_type block
-
-    T_RCB  shift, and go to state 32
-
-
-State 30
-
-   11 argument_list: id_type_comma_list .
-
-    $default  reduce using rule 11 (argument_list)
-
-
-State 31
-
-   12 id_type_comma_list: T_ID decaf_type . T_COMMA id_type_comma_list
-   13                   | T_ID decaf_type .
-
-    T_COMMA  shift, and go to state 33
-
-    $default  reduce using rule 13 (id_type_comma_list)
-
-
-State 32
-
-   16 method_decl: T_FUNC T_ID T_LCB argument_list T_RCB . method_type block
-
-    T_INTTYPE   shift, and go to state 19
-    T_BOOLTYPE  shift, and go to state 20
+    T_INTTYPE   shift, and go to state 15
+    T_BOOLTYPE  shift, and go to state 17
     T_VOID      shift, and go to state 34
 
     decaf_type   go to state 35
     method_type  go to state 36
 
 
-State 33
+State 26
 
-   12 id_type_comma_list: T_ID decaf_type T_COMMA . id_type_comma_list
+    5 extern_def: T_EXTERN T_FUNC T_ID T_LPAREN extern_type_comma_list T_RPAREN . method_type T_SEMICOLON
 
-    T_ID  shift, and go to state 28
+    T_INTTYPE   shift, and go to state 15
+    T_BOOLTYPE  shift, and go to state 17
+    T_VOID      shift, and go to state 34
 
-    id_type_comma_list  go to state 37
-
-
-State 34
-
-   23 method_type: T_VOID .
-
-    $default  reduce using rule 23 (method_type)
+    decaf_type   go to state 35
+    method_type  go to state 37
 
 
-State 35
+State 27
 
-   24 method_type: decaf_type .
+    7 extern_type_comma_list: extern_type T_COMMA . extern_type_comma_list
 
-    $default  reduce using rule 24 (method_type)
+    T_INTTYPE     shift, and go to state 15
+    T_STRINGTYPE  shift, and go to state 16
+    T_BOOLTYPE    shift, and go to state 17
 
-
-State 36
-
-   16 method_decl: T_FUNC T_ID T_LCB argument_list T_RCB method_type . block
-
-    T_LCB  shift, and go to state 38
-
-    block  go to state 39
+    extern_type_comma_list  go to state 38
+    decaf_type              go to state 20
+    extern_type             go to state 21
 
 
-State 37
+State 28
 
-   12 id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list .
+   15 id_comma_list: T_ID . T_COMMA id_comma_list
+   16              | T_ID .
 
-    $default  reduce using rule 12 (id_type_comma_list)
+    T_COMMA  shift, and go to state 39
 
-
-State 38
-
-   20 block: T_LCB . var_decls T_RCB
-
-    T_VAR  shift, and go to state 40
-
-    $default  reduce using rule 17 (var_decls)
-
-    var_decls  go to state 41
-    var_decl   go to state 42
+    $default  reduce using rule 16 (id_comma_list)
 
 
-State 39
+State 29
 
-   16 method_decl: T_FUNC T_ID T_LCB argument_list T_RCB method_type block .
+   12 field_decl: T_VAR id_comma_list . decaf_type T_SEMICOLON
+   13           | T_VAR id_comma_list . array_type T_SEMICOLON
+   14           | T_VAR id_comma_list . decaf_type T_ASSIGN expr T_SEMICOLON
 
-    $default  reduce using rule 16 (method_decl)
+    T_INTTYPE   shift, and go to state 15
+    T_BOOLTYPE  shift, and go to state 17
+    T_LSB       shift, and go to state 40
 
-
-State 40
-
-   19 var_decl: T_VAR . id_comma_list decaf_type T_SEMICOLON
-
-    T_ID  shift, and go to state 12
-
-    id_comma_list  go to state 43
+    decaf_type  go to state 41
+    array_type  go to state 42
 
 
-State 41
+State 30
 
-   20 block: T_LCB var_decls . T_RCB
+   19 method_decl: T_FUNC . T_ID T_LPAREN param_list T_RPAREN method_type block
+
+    T_ID  shift, and go to state 43
+
+
+State 31
+
+    9 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls . T_RCB
 
     T_RCB  shift, and go to state 44
 
 
-State 42
+State 32
 
-   18 var_decls: var_decl . var_decls
+   18 method_decls: method_decl . method_decls
 
-    T_VAR  shift, and go to state 40
+    T_FUNC  shift, and go to state 30
 
-    $default  reduce using rule 17 (var_decls)
+    $default  reduce using rule 17 (method_decls)
 
-    var_decls  go to state 45
-    var_decl   go to state 42
-
-
-State 43
-
-   19 var_decl: T_VAR id_comma_list . decaf_type T_SEMICOLON
-
-    T_INTTYPE   shift, and go to state 19
-    T_BOOLTYPE  shift, and go to state 20
-
-    decaf_type  go to state 46
+    method_decls  go to state 45
+    method_decl   go to state 32
 
 
-State 44
+State 33
 
-   20 block: T_LCB var_decls T_RCB .
+   11 field_decls: field_decl field_decls .
 
-    $default  reduce using rule 20 (block)
-
-
-State 45
-
-   18 var_decls: var_decl var_decls .
-
-    $default  reduce using rule 18 (var_decls)
+    $default  reduce using rule 11 (field_decls)
 
 
-State 46
+State 34
 
-   19 var_decl: T_VAR id_comma_list decaf_type . T_SEMICOLON
+   80 method_type: T_VOID .
+
+    $default  reduce using rule 80 (method_type)
+
+
+State 35
+
+   81 method_type: decaf_type .
+
+    $default  reduce using rule 81 (method_type)
+
+
+State 36
+
+    6 extern_def: T_EXTERN T_FUNC T_ID T_LPAREN T_VOID T_RPAREN method_type . T_SEMICOLON
+
+    T_SEMICOLON  shift, and go to state 46
+
+
+State 37
+
+    5 extern_def: T_EXTERN T_FUNC T_ID T_LPAREN extern_type_comma_list T_RPAREN method_type . T_SEMICOLON
 
     T_SEMICOLON  shift, and go to state 47
 
 
+State 38
+
+    7 extern_type_comma_list: extern_type T_COMMA extern_type_comma_list .
+
+    $default  reduce using rule 7 (extern_type_comma_list)
+
+
+State 39
+
+   15 id_comma_list: T_ID T_COMMA . id_comma_list
+
+    T_ID  shift, and go to state 28
+
+    id_comma_list  go to state 48
+
+
+State 40
+
+   79 array_type: T_LSB . T_INTCONSTANT T_RSB decaf_type
+
+    T_INTCONSTANT  shift, and go to state 49
+
+
+State 41
+
+   12 field_decl: T_VAR id_comma_list decaf_type . T_SEMICOLON
+   14           | T_VAR id_comma_list decaf_type . T_ASSIGN expr T_SEMICOLON
+
+    T_SEMICOLON  shift, and go to state 50
+    T_ASSIGN     shift, and go to state 51
+
+
+State 42
+
+   13 field_decl: T_VAR id_comma_list array_type . T_SEMICOLON
+
+    T_SEMICOLON  shift, and go to state 52
+
+
+State 43
+
+   19 method_decl: T_FUNC T_ID . T_LPAREN param_list T_RPAREN method_type block
+
+    T_LPAREN  shift, and go to state 53
+
+
+State 44
+
+    9 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls T_RCB .
+
+    $default  reduce using rule 9 (decafpackage)
+
+
+State 45
+
+   18 method_decls: method_decl method_decls .
+
+    $default  reduce using rule 18 (method_decls)
+
+
+State 46
+
+    6 extern_def: T_EXTERN T_FUNC T_ID T_LPAREN T_VOID T_RPAREN method_type T_SEMICOLON .
+
+    $default  reduce using rule 6 (extern_def)
+
+
 State 47
 
-   19 var_decl: T_VAR id_comma_list decaf_type T_SEMICOLON .
+    5 extern_def: T_EXTERN T_FUNC T_ID T_LPAREN extern_type_comma_list T_RPAREN method_type T_SEMICOLON .
 
-    $default  reduce using rule 19 (var_decl)
+    $default  reduce using rule 5 (extern_def)
+
+
+State 48
+
+   15 id_comma_list: T_ID T_COMMA id_comma_list .
+
+    $default  reduce using rule 15 (id_comma_list)
+
+
+State 49
+
+   79 array_type: T_LSB T_INTCONSTANT . T_RSB decaf_type
+
+    T_RSB  shift, and go to state 54
+
+
+State 50
+
+   12 field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON .
+
+    $default  reduce using rule 12 (field_decl)
+
+
+State 51
+
+   14 field_decl: T_VAR id_comma_list decaf_type T_ASSIGN . expr T_SEMICOLON
+
+    T_TRUE          shift, and go to state 55
+    T_FALSE         shift, and go to state 56
+    T_LPAREN        shift, and go to state 57
+    T_INTCONSTANT   shift, and go to state 58
+    T_CHARCONSTANT  shift, and go to state 59
+    T_ID            shift, and go to state 60
+
+    method_call    go to state 61
+    expr           go to state 62
+    value          go to state 63
+    constant       go to state 64
+    bool_constant  go to state 65
+
+
+State 52
+
+   13 field_decl: T_VAR id_comma_list array_type T_SEMICOLON .
+
+    $default  reduce using rule 13 (field_decl)
+
+
+State 53
+
+   19 method_decl: T_FUNC T_ID T_LPAREN . param_list T_RPAREN method_type block
+
+    T_ID  shift, and go to state 66
+
+    $default  reduce using rule 20 (param_list)
+
+    param_list          go to state 67
+    id_type_comma_list  go to state 68
+
+
+State 54
+
+   79 array_type: T_LSB T_INTCONSTANT T_RSB . decaf_type
+
+    T_INTTYPE   shift, and go to state 15
+    T_BOOLTYPE  shift, and go to state 17
+
+    decaf_type  go to state 69
+
+
+State 55
+
+   75 bool_constant: T_TRUE .
+
+    $default  reduce using rule 75 (bool_constant)
+
+
+State 56
+
+   76 bool_constant: T_FALSE .
+
+    $default  reduce using rule 76 (bool_constant)
+
+
+State 57
+
+   54 expr: T_LPAREN . expr T_RPAREN
+
+    T_TRUE          shift, and go to state 55
+    T_FALSE         shift, and go to state 56
+    T_LPAREN        shift, and go to state 57
+    T_INTCONSTANT   shift, and go to state 58
+    T_CHARCONSTANT  shift, and go to state 59
+    T_ID            shift, and go to state 60
+
+    method_call    go to state 61
+    expr           go to state 70
+    value          go to state 63
+    constant       go to state 64
+    bool_constant  go to state 65
+
+
+State 58
+
+   72 constant: T_INTCONSTANT .
+
+    $default  reduce using rule 72 (constant)
+
+
+State 59
+
+   73 constant: T_CHARCONSTANT .
+
+    $default  reduce using rule 73 (constant)
+
+
+State 60
+
+   37 method_call: T_ID . T_LPAREN method_arg_list T_RPAREN T_SEMICOLON
+   55 value: T_ID . T_LSB expr T_RSB
+   56      | T_ID .
+
+    T_LPAREN  shift, and go to state 71
+    T_LSB     shift, and go to state 72
+
+    $default  reduce using rule 56 (value)
+
+
+State 61
+
+   51 expr: method_call .
+
+    $default  reduce using rule 51 (expr)
+
+
+State 62
+
+   14 field_decl: T_VAR id_comma_list decaf_type T_ASSIGN expr . T_SEMICOLON
+   53 expr: expr . binary_op expr
+
+    T_SEMICOLON   shift, and go to state 73
+    T_EQ          shift, and go to state 74
+    T_LEQ         shift, and go to state 75
+    T_GEQ         shift, and go to state 76
+    T_NEQ         shift, and go to state 77
+    T_LEFTSHIFT   shift, and go to state 78
+    T_RIGHTSHIFT  shift, and go to state 79
+    T_AND         shift, and go to state 80
+    T_OR          shift, and go to state 81
+    T_PLUS        shift, and go to state 82
+    T_MINUS       shift, and go to state 83
+    T_MULT        shift, and go to state 84
+    T_DIV         shift, and go to state 85
+    T_LT          shift, and go to state 86
+    T_RT          shift, and go to state 87
+    T_MOD         shift, and go to state 88
+
+    binary_op  go to state 89
+
+
+State 63
+
+   50 expr: value .
+
+    $default  reduce using rule 50 (expr)
+
+
+State 64
+
+   52 expr: constant .
+
+    $default  reduce using rule 52 (expr)
+
+
+State 65
+
+   74 constant: bool_constant .
+
+    $default  reduce using rule 74 (constant)
+
+
+State 66
+
+   22 id_type_comma_list: T_ID . decaf_type T_COMMA id_type_comma_list
+   23                   | T_ID . decaf_type
+
+    T_INTTYPE   shift, and go to state 15
+    T_BOOLTYPE  shift, and go to state 17
+
+    decaf_type  go to state 90
+
+
+State 67
+
+   19 method_decl: T_FUNC T_ID T_LPAREN param_list . T_RPAREN method_type block
+
+    T_RPAREN  shift, and go to state 91
+
+
+State 68
+
+   21 param_list: id_type_comma_list .
+
+    $default  reduce using rule 21 (param_list)
+
+
+State 69
+
+   79 array_type: T_LSB T_INTCONSTANT T_RSB decaf_type .
+
+    $default  reduce using rule 79 (array_type)
+
+
+State 70
+
+   53 expr: expr . binary_op expr
+   54     | T_LPAREN expr . T_RPAREN
+
+    T_RPAREN      shift, and go to state 92
+    T_EQ          shift, and go to state 74
+    T_LEQ         shift, and go to state 75
+    T_GEQ         shift, and go to state 76
+    T_NEQ         shift, and go to state 77
+    T_LEFTSHIFT   shift, and go to state 78
+    T_RIGHTSHIFT  shift, and go to state 79
+    T_AND         shift, and go to state 80
+    T_OR          shift, and go to state 81
+    T_PLUS        shift, and go to state 82
+    T_MINUS       shift, and go to state 83
+    T_MULT        shift, and go to state 84
+    T_DIV         shift, and go to state 85
+    T_LT          shift, and go to state 86
+    T_RT          shift, and go to state 87
+    T_MOD         shift, and go to state 88
+
+    binary_op  go to state 89
+
+
+State 71
+
+   37 method_call: T_ID T_LPAREN . method_arg_list T_RPAREN T_SEMICOLON
+
+    T_TRUE            shift, and go to state 55
+    T_FALSE           shift, and go to state 56
+    T_LPAREN          shift, and go to state 57
+    T_INTCONSTANT     shift, and go to state 58
+    T_CHARCONSTANT    shift, and go to state 59
+    T_STRINGCONSTANT  shift, and go to state 93
+    T_ID              shift, and go to state 60
+
+    $default  reduce using rule 44 (method_arg_list)
+
+    method_call            go to state 61
+    method_arg_list        go to state 94
+    method_arg_comma_list  go to state 95
+    method_arg             go to state 96
+    expr                   go to state 97
+    value                  go to state 63
+    constant               go to state 64
+    bool_constant          go to state 65
+
+
+State 72
+
+   55 value: T_ID T_LSB . expr T_RSB
+
+    T_TRUE          shift, and go to state 55
+    T_FALSE         shift, and go to state 56
+    T_LPAREN        shift, and go to state 57
+    T_INTCONSTANT   shift, and go to state 58
+    T_CHARCONSTANT  shift, and go to state 59
+    T_ID            shift, and go to state 60
+
+    method_call    go to state 61
+    expr           go to state 98
+    value          go to state 63
+    constant       go to state 64
+    bool_constant  go to state 65
+
+
+State 73
+
+   14 field_decl: T_VAR id_comma_list decaf_type T_ASSIGN expr T_SEMICOLON .
+
+    $default  reduce using rule 14 (field_decl)
+
+
+State 74
+
+   64 binary_op: T_EQ .
+
+    $default  reduce using rule 64 (binary_op)
+
+
+State 75
+
+   67 binary_op: T_LEQ .
+
+    $default  reduce using rule 67 (binary_op)
+
+
+State 76
+
+   69 binary_op: T_GEQ .
+
+    $default  reduce using rule 69 (binary_op)
+
+
+State 77
+
+   65 binary_op: T_NEQ .
+
+    $default  reduce using rule 65 (binary_op)
+
+
+State 78
+
+   61 binary_op: T_LEFTSHIFT .
+
+    $default  reduce using rule 61 (binary_op)
+
+
+State 79
+
+   62 binary_op: T_RIGHTSHIFT .
+
+    $default  reduce using rule 62 (binary_op)
+
+
+State 80
+
+   70 binary_op: T_AND .
+
+    $default  reduce using rule 70 (binary_op)
+
+
+State 81
+
+   71 binary_op: T_OR .
+
+    $default  reduce using rule 71 (binary_op)
+
+
+State 82
+
+   57 binary_op: T_PLUS .
+
+    $default  reduce using rule 57 (binary_op)
+
+
+State 83
+
+   58 binary_op: T_MINUS .
+
+    $default  reduce using rule 58 (binary_op)
+
+
+State 84
+
+   59 binary_op: T_MULT .
+
+    $default  reduce using rule 59 (binary_op)
+
+
+State 85
+
+   60 binary_op: T_DIV .
+
+    $default  reduce using rule 60 (binary_op)
+
+
+State 86
+
+   66 binary_op: T_LT .
+
+    $default  reduce using rule 66 (binary_op)
+
+
+State 87
+
+   68 binary_op: T_RT .
+
+    $default  reduce using rule 68 (binary_op)
+
+
+State 88
+
+   63 binary_op: T_MOD .
+
+    $default  reduce using rule 63 (binary_op)
+
+
+State 89
+
+   53 expr: expr binary_op . expr
+
+    T_TRUE          shift, and go to state 55
+    T_FALSE         shift, and go to state 56
+    T_LPAREN        shift, and go to state 57
+    T_INTCONSTANT   shift, and go to state 58
+    T_CHARCONSTANT  shift, and go to state 59
+    T_ID            shift, and go to state 60
+
+    method_call    go to state 61
+    expr           go to state 99
+    value          go to state 63
+    constant       go to state 64
+    bool_constant  go to state 65
+
+
+State 90
+
+   22 id_type_comma_list: T_ID decaf_type . T_COMMA id_type_comma_list
+   23                   | T_ID decaf_type .
+
+    T_COMMA  shift, and go to state 100
+
+    $default  reduce using rule 23 (id_type_comma_list)
+
+
+State 91
+
+   19 method_decl: T_FUNC T_ID T_LPAREN param_list T_RPAREN . method_type block
+
+    T_INTTYPE   shift, and go to state 15
+    T_BOOLTYPE  shift, and go to state 17
+    T_VOID      shift, and go to state 34
+
+    decaf_type   go to state 35
+    method_type  go to state 101
+
+
+State 92
+
+   54 expr: T_LPAREN expr T_RPAREN .
+
+    $default  reduce using rule 54 (expr)
+
+
+State 93
+
+   48 method_arg: T_STRINGCONSTANT .
+
+    $default  reduce using rule 48 (method_arg)
+
+
+State 94
+
+   37 method_call: T_ID T_LPAREN method_arg_list . T_RPAREN T_SEMICOLON
+
+    T_RPAREN  shift, and go to state 102
+
+
+State 95
+
+   45 method_arg_list: method_arg_comma_list .
+
+    $default  reduce using rule 45 (method_arg_list)
+
+
+State 96
+
+   46 method_arg_comma_list: method_arg . T_COMMA method_arg_comma_list
+   47                      | method_arg .
+
+    T_COMMA  shift, and go to state 103
+
+    $default  reduce using rule 47 (method_arg_comma_list)
+
+
+State 97
+
+   49 method_arg: expr .
+   53 expr: expr . binary_op expr
+
+    T_EQ          shift, and go to state 74
+    T_LEQ         shift, and go to state 75
+    T_GEQ         shift, and go to state 76
+    T_NEQ         shift, and go to state 77
+    T_LEFTSHIFT   shift, and go to state 78
+    T_RIGHTSHIFT  shift, and go to state 79
+    T_AND         shift, and go to state 80
+    T_OR          shift, and go to state 81
+    T_PLUS        shift, and go to state 82
+    T_MINUS       shift, and go to state 83
+    T_MULT        shift, and go to state 84
+    T_DIV         shift, and go to state 85
+    T_LT          shift, and go to state 86
+    T_RT          shift, and go to state 87
+    T_MOD         shift, and go to state 88
+
+    $default  reduce using rule 49 (method_arg)
+
+    binary_op  go to state 89
+
+
+State 98
+
+   53 expr: expr . binary_op expr
+   55 value: T_ID T_LSB expr . T_RSB
+
+    T_RSB         shift, and go to state 104
+    T_EQ          shift, and go to state 74
+    T_LEQ         shift, and go to state 75
+    T_GEQ         shift, and go to state 76
+    T_NEQ         shift, and go to state 77
+    T_LEFTSHIFT   shift, and go to state 78
+    T_RIGHTSHIFT  shift, and go to state 79
+    T_AND         shift, and go to state 80
+    T_OR          shift, and go to state 81
+    T_PLUS        shift, and go to state 82
+    T_MINUS       shift, and go to state 83
+    T_MULT        shift, and go to state 84
+    T_DIV         shift, and go to state 85
+    T_LT          shift, and go to state 86
+    T_RT          shift, and go to state 87
+    T_MOD         shift, and go to state 88
+
+    binary_op  go to state 89
+
+
+State 99
+
+   53 expr: expr . binary_op expr
+   53     | expr binary_op expr .
+
+    T_EQ          shift, and go to state 74
+    T_LEQ         shift, and go to state 75
+    T_GEQ         shift, and go to state 76
+    T_NEQ         shift, and go to state 77
+    T_LEFTSHIFT   shift, and go to state 78
+    T_RIGHTSHIFT  shift, and go to state 79
+    T_AND         shift, and go to state 80
+    T_OR          shift, and go to state 81
+    T_PLUS        shift, and go to state 82
+    T_MINUS       shift, and go to state 83
+    T_MULT        shift, and go to state 84
+    T_DIV         shift, and go to state 85
+    T_LT          shift, and go to state 86
+    T_RT          shift, and go to state 87
+    T_MOD         shift, and go to state 88
+
+    T_EQ          [reduce using rule 53 (expr)]
+    T_LEQ         [reduce using rule 53 (expr)]
+    T_GEQ         [reduce using rule 53 (expr)]
+    T_NEQ         [reduce using rule 53 (expr)]
+    T_LEFTSHIFT   [reduce using rule 53 (expr)]
+    T_RIGHTSHIFT  [reduce using rule 53 (expr)]
+    T_AND         [reduce using rule 53 (expr)]
+    T_OR          [reduce using rule 53 (expr)]
+    T_PLUS        [reduce using rule 53 (expr)]
+    T_MINUS       [reduce using rule 53 (expr)]
+    T_MULT        [reduce using rule 53 (expr)]
+    T_DIV         [reduce using rule 53 (expr)]
+    T_LT          [reduce using rule 53 (expr)]
+    T_RT          [reduce using rule 53 (expr)]
+    T_MOD         [reduce using rule 53 (expr)]
+    $default      reduce using rule 53 (expr)
+
+    binary_op  go to state 89
+
+
+State 100
+
+   22 id_type_comma_list: T_ID decaf_type T_COMMA . id_type_comma_list
+
+    T_ID  shift, and go to state 66
+
+    id_type_comma_list  go to state 105
+
+
+State 101
+
+   19 method_decl: T_FUNC T_ID T_LPAREN param_list T_RPAREN method_type . block
+
+    T_LCB  shift, and go to state 106
+
+    block  go to state 107
+
+
+State 102
+
+   37 method_call: T_ID T_LPAREN method_arg_list T_RPAREN . T_SEMICOLON
+
+    T_SEMICOLON  shift, and go to state 108
+
+
+State 103
+
+   46 method_arg_comma_list: method_arg T_COMMA . method_arg_comma_list
+
+    T_TRUE            shift, and go to state 55
+    T_FALSE           shift, and go to state 56
+    T_LPAREN          shift, and go to state 57
+    T_INTCONSTANT     shift, and go to state 58
+    T_CHARCONSTANT    shift, and go to state 59
+    T_STRINGCONSTANT  shift, and go to state 93
+    T_ID              shift, and go to state 60
+
+    method_call            go to state 61
+    method_arg_comma_list  go to state 109
+    method_arg             go to state 96
+    expr                   go to state 97
+    value                  go to state 63
+    constant               go to state 64
+    bool_constant          go to state 65
+
+
+State 104
+
+   55 value: T_ID T_LSB expr T_RSB .
+
+    $default  reduce using rule 55 (value)
+
+
+State 105
+
+   22 id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list .
+
+    $default  reduce using rule 22 (id_type_comma_list)
+
+
+State 106
+
+   24 block: T_LCB . var_decls statements T_RCB
+
+    T_VAR  shift, and go to state 110
+
+    $default  reduce using rule 25 (var_decls)
+
+    var_decls  go to state 111
+    var_decl   go to state 112
+
+
+State 107
+
+   19 method_decl: T_FUNC T_ID T_LPAREN param_list T_RPAREN method_type block .
+
+    $default  reduce using rule 19 (method_decl)
+
+
+State 108
+
+   37 method_call: T_ID T_LPAREN method_arg_list T_RPAREN T_SEMICOLON .
+
+    $default  reduce using rule 37 (method_call)
+
+
+State 109
+
+   46 method_arg_comma_list: method_arg T_COMMA method_arg_comma_list .
+
+    $default  reduce using rule 46 (method_arg_comma_list)
+
+
+State 110
+
+   27 var_decl: T_VAR . id_comma_list decaf_type T_SEMICOLON
+
+    T_ID  shift, and go to state 28
+
+    id_comma_list  go to state 113
+
+
+State 111
+
+   24 block: T_LCB var_decls . statements T_RCB
+
+    T_IF     shift, and go to state 114
+    T_FOR    shift, and go to state 115
+    T_WHILE  shift, and go to state 116
+    T_LCB    shift, and go to state 106
+    T_ID     shift, and go to state 60
+
+    $default  reduce using rule 28 (statements)
+
+    block        go to state 117
+    statements   go to state 118
+    statement    go to state 119
+    assign       go to state 120
+    method_call  go to state 121
+    if_stmt      go to state 122
+    while_stmt   go to state 123
+    for_stmt     go to state 124
+    value        go to state 125
+
+
+State 112
+
+   26 var_decls: var_decl . var_decls
+
+    T_VAR  shift, and go to state 110
+
+    $default  reduce using rule 25 (var_decls)
+
+    var_decls  go to state 126
+    var_decl   go to state 112
+
+
+State 113
+
+   27 var_decl: T_VAR id_comma_list . decaf_type T_SEMICOLON
+
+    T_INTTYPE   shift, and go to state 15
+    T_BOOLTYPE  shift, and go to state 17
+
+    decaf_type  go to state 127
+
+
+State 114
+
+   38 if_stmt: T_IF . T_LPAREN expr T_RPAREN block
+   39        | T_IF . T_LPAREN expr T_RPAREN block T_ELSE block
+
+    T_LPAREN  shift, and go to state 128
+
+
+State 115
+
+   41 for_stmt: T_FOR . T_LPAREN assign_list T_SEMICOLON expr T_SEMICOLON assign_list T_RPAREN T_SEMICOLON
+
+    T_LPAREN  shift, and go to state 129
+
+
+State 116
+
+   40 while_stmt: T_WHILE . T_LPAREN expr T_RPAREN block
+
+    T_LPAREN  shift, and go to state 130
+
+
+State 117
+
+   30 statement: block .
+
+    $default  reduce using rule 30 (statement)
+
+
+State 118
+
+   24 block: T_LCB var_decls statements . T_RCB
+
+    T_RCB  shift, and go to state 131
+
+
+State 119
+
+   29 statements: statement . statements
+
+    T_IF     shift, and go to state 114
+    T_FOR    shift, and go to state 115
+    T_WHILE  shift, and go to state 116
+    T_LCB    shift, and go to state 106
+    T_ID     shift, and go to state 60
+
+    $default  reduce using rule 28 (statements)
+
+    block        go to state 117
+    statements   go to state 132
+    statement    go to state 119
+    assign       go to state 120
+    method_call  go to state 121
+    if_stmt      go to state 122
+    while_stmt   go to state 123
+    for_stmt     go to state 124
+    value        go to state 125
+
+
+State 120
+
+   31 statement: assign .
+
+    $default  reduce using rule 31 (statement)
+
+
+State 121
+
+   32 statement: method_call .
+
+    $default  reduce using rule 32 (statement)
+
+
+State 122
+
+   33 statement: if_stmt .
+
+    $default  reduce using rule 33 (statement)
+
+
+State 123
+
+   34 statement: while_stmt .
+
+    $default  reduce using rule 34 (statement)
+
+
+State 124
+
+   35 statement: for_stmt .
+
+    $default  reduce using rule 35 (statement)
+
+
+State 125
+
+   36 assign: value . T_ASSIGN expr T_SEMICOLON
+
+    T_ASSIGN  shift, and go to state 133
+
+
+State 126
+
+   26 var_decls: var_decl var_decls .
+
+    $default  reduce using rule 26 (var_decls)
+
+
+State 127
+
+   27 var_decl: T_VAR id_comma_list decaf_type . T_SEMICOLON
+
+    T_SEMICOLON  shift, and go to state 134
+
+
+State 128
+
+   38 if_stmt: T_IF T_LPAREN . expr T_RPAREN block
+   39        | T_IF T_LPAREN . expr T_RPAREN block T_ELSE block
+
+    T_TRUE          shift, and go to state 55
+    T_FALSE         shift, and go to state 56
+    T_LPAREN        shift, and go to state 57
+    T_INTCONSTANT   shift, and go to state 58
+    T_CHARCONSTANT  shift, and go to state 59
+    T_ID            shift, and go to state 60
+
+    method_call    go to state 61
+    expr           go to state 135
+    value          go to state 63
+    constant       go to state 64
+    bool_constant  go to state 65
+
+
+State 129
+
+   41 for_stmt: T_FOR T_LPAREN . assign_list T_SEMICOLON expr T_SEMICOLON assign_list T_RPAREN T_SEMICOLON
+
+    T_ID  shift, and go to state 136
+
+    assign       go to state 137
+    assign_list  go to state 138
+    value        go to state 125
+
+
+State 130
+
+   40 while_stmt: T_WHILE T_LPAREN . expr T_RPAREN block
+
+    T_TRUE          shift, and go to state 55
+    T_FALSE         shift, and go to state 56
+    T_LPAREN        shift, and go to state 57
+    T_INTCONSTANT   shift, and go to state 58
+    T_CHARCONSTANT  shift, and go to state 59
+    T_ID            shift, and go to state 60
+
+    method_call    go to state 61
+    expr           go to state 139
+    value          go to state 63
+    constant       go to state 64
+    bool_constant  go to state 65
+
+
+State 131
+
+   24 block: T_LCB var_decls statements T_RCB .
+
+    $default  reduce using rule 24 (block)
+
+
+State 132
+
+   29 statements: statement statements .
+
+    $default  reduce using rule 29 (statements)
+
+
+State 133
+
+   36 assign: value T_ASSIGN . expr T_SEMICOLON
+
+    T_TRUE          shift, and go to state 55
+    T_FALSE         shift, and go to state 56
+    T_LPAREN        shift, and go to state 57
+    T_INTCONSTANT   shift, and go to state 58
+    T_CHARCONSTANT  shift, and go to state 59
+    T_ID            shift, and go to state 60
+
+    method_call    go to state 61
+    expr           go to state 140
+    value          go to state 63
+    constant       go to state 64
+    bool_constant  go to state 65
+
+
+State 134
+
+   27 var_decl: T_VAR id_comma_list decaf_type T_SEMICOLON .
+
+    $default  reduce using rule 27 (var_decl)
+
+
+State 135
+
+   38 if_stmt: T_IF T_LPAREN expr . T_RPAREN block
+   39        | T_IF T_LPAREN expr . T_RPAREN block T_ELSE block
+   53 expr: expr . binary_op expr
+
+    T_RPAREN      shift, and go to state 141
+    T_EQ          shift, and go to state 74
+    T_LEQ         shift, and go to state 75
+    T_GEQ         shift, and go to state 76
+    T_NEQ         shift, and go to state 77
+    T_LEFTSHIFT   shift, and go to state 78
+    T_RIGHTSHIFT  shift, and go to state 79
+    T_AND         shift, and go to state 80
+    T_OR          shift, and go to state 81
+    T_PLUS        shift, and go to state 82
+    T_MINUS       shift, and go to state 83
+    T_MULT        shift, and go to state 84
+    T_DIV         shift, and go to state 85
+    T_LT          shift, and go to state 86
+    T_RT          shift, and go to state 87
+    T_MOD         shift, and go to state 88
+
+    binary_op  go to state 89
+
+
+State 136
+
+   55 value: T_ID . T_LSB expr T_RSB
+   56      | T_ID .
+
+    T_LSB  shift, and go to state 72
+
+    $default  reduce using rule 56 (value)
+
+
+State 137
+
+   42 assign_list: assign . T_COMMA assign_list
+   43            | assign .
+
+    T_COMMA  shift, and go to state 142
+
+    $default  reduce using rule 43 (assign_list)
+
+
+State 138
+
+   41 for_stmt: T_FOR T_LPAREN assign_list . T_SEMICOLON expr T_SEMICOLON assign_list T_RPAREN T_SEMICOLON
+
+    T_SEMICOLON  shift, and go to state 143
+
+
+State 139
+
+   40 while_stmt: T_WHILE T_LPAREN expr . T_RPAREN block
+   53 expr: expr . binary_op expr
+
+    T_RPAREN      shift, and go to state 144
+    T_EQ          shift, and go to state 74
+    T_LEQ         shift, and go to state 75
+    T_GEQ         shift, and go to state 76
+    T_NEQ         shift, and go to state 77
+    T_LEFTSHIFT   shift, and go to state 78
+    T_RIGHTSHIFT  shift, and go to state 79
+    T_AND         shift, and go to state 80
+    T_OR          shift, and go to state 81
+    T_PLUS        shift, and go to state 82
+    T_MINUS       shift, and go to state 83
+    T_MULT        shift, and go to state 84
+    T_DIV         shift, and go to state 85
+    T_LT          shift, and go to state 86
+    T_RT          shift, and go to state 87
+    T_MOD         shift, and go to state 88
+
+    binary_op  go to state 89
+
+
+State 140
+
+   36 assign: value T_ASSIGN expr . T_SEMICOLON
+   53 expr: expr . binary_op expr
+
+    T_SEMICOLON   shift, and go to state 145
+    T_EQ          shift, and go to state 74
+    T_LEQ         shift, and go to state 75
+    T_GEQ         shift, and go to state 76
+    T_NEQ         shift, and go to state 77
+    T_LEFTSHIFT   shift, and go to state 78
+    T_RIGHTSHIFT  shift, and go to state 79
+    T_AND         shift, and go to state 80
+    T_OR          shift, and go to state 81
+    T_PLUS        shift, and go to state 82
+    T_MINUS       shift, and go to state 83
+    T_MULT        shift, and go to state 84
+    T_DIV         shift, and go to state 85
+    T_LT          shift, and go to state 86
+    T_RT          shift, and go to state 87
+    T_MOD         shift, and go to state 88
+
+    binary_op  go to state 89
+
+
+State 141
+
+   38 if_stmt: T_IF T_LPAREN expr T_RPAREN . block
+   39        | T_IF T_LPAREN expr T_RPAREN . block T_ELSE block
+
+    T_LCB  shift, and go to state 106
+
+    block  go to state 146
+
+
+State 142
+
+   42 assign_list: assign T_COMMA . assign_list
+
+    T_ID  shift, and go to state 136
+
+    assign       go to state 137
+    assign_list  go to state 147
+    value        go to state 125
+
+
+State 143
+
+   41 for_stmt: T_FOR T_LPAREN assign_list T_SEMICOLON . expr T_SEMICOLON assign_list T_RPAREN T_SEMICOLON
+
+    T_TRUE          shift, and go to state 55
+    T_FALSE         shift, and go to state 56
+    T_LPAREN        shift, and go to state 57
+    T_INTCONSTANT   shift, and go to state 58
+    T_CHARCONSTANT  shift, and go to state 59
+    T_ID            shift, and go to state 60
+
+    method_call    go to state 61
+    expr           go to state 148
+    value          go to state 63
+    constant       go to state 64
+    bool_constant  go to state 65
+
+
+State 144
+
+   40 while_stmt: T_WHILE T_LPAREN expr T_RPAREN . block
+
+    T_LCB  shift, and go to state 106
+
+    block  go to state 149
+
+
+State 145
+
+   36 assign: value T_ASSIGN expr T_SEMICOLON .
+
+    $default  reduce using rule 36 (assign)
+
+
+State 146
+
+   38 if_stmt: T_IF T_LPAREN expr T_RPAREN block .
+   39        | T_IF T_LPAREN expr T_RPAREN block . T_ELSE block
+
+    T_ELSE  shift, and go to state 150
+
+    $default  reduce using rule 38 (if_stmt)
+
+
+State 147
+
+   42 assign_list: assign T_COMMA assign_list .
+
+    $default  reduce using rule 42 (assign_list)
+
+
+State 148
+
+   41 for_stmt: T_FOR T_LPAREN assign_list T_SEMICOLON expr . T_SEMICOLON assign_list T_RPAREN T_SEMICOLON
+   53 expr: expr . binary_op expr
+
+    T_SEMICOLON   shift, and go to state 151
+    T_EQ          shift, and go to state 74
+    T_LEQ         shift, and go to state 75
+    T_GEQ         shift, and go to state 76
+    T_NEQ         shift, and go to state 77
+    T_LEFTSHIFT   shift, and go to state 78
+    T_RIGHTSHIFT  shift, and go to state 79
+    T_AND         shift, and go to state 80
+    T_OR          shift, and go to state 81
+    T_PLUS        shift, and go to state 82
+    T_MINUS       shift, and go to state 83
+    T_MULT        shift, and go to state 84
+    T_DIV         shift, and go to state 85
+    T_LT          shift, and go to state 86
+    T_RT          shift, and go to state 87
+    T_MOD         shift, and go to state 88
+
+    binary_op  go to state 89
+
+
+State 149
+
+   40 while_stmt: T_WHILE T_LPAREN expr T_RPAREN block .
+
+    $default  reduce using rule 40 (while_stmt)
+
+
+State 150
+
+   39 if_stmt: T_IF T_LPAREN expr T_RPAREN block T_ELSE . block
+
+    T_LCB  shift, and go to state 106
+
+    block  go to state 152
+
+
+State 151
+
+   41 for_stmt: T_FOR T_LPAREN assign_list T_SEMICOLON expr T_SEMICOLON . assign_list T_RPAREN T_SEMICOLON
+
+    T_ID  shift, and go to state 136
+
+    assign       go to state 137
+    assign_list  go to state 153
+    value        go to state 125
+
+
+State 152
+
+   39 if_stmt: T_IF T_LPAREN expr T_RPAREN block T_ELSE block .
+
+    $default  reduce using rule 39 (if_stmt)
+
+
+State 153
+
+   41 for_stmt: T_FOR T_LPAREN assign_list T_SEMICOLON expr T_SEMICOLON assign_list . T_RPAREN T_SEMICOLON
+
+    T_RPAREN  shift, and go to state 154
+
+
+State 154
+
+   41 for_stmt: T_FOR T_LPAREN assign_list T_SEMICOLON expr T_SEMICOLON assign_list T_RPAREN . T_SEMICOLON
+
+    T_SEMICOLON  shift, and go to state 155
+
+
+State 155
+
+   41 for_stmt: T_FOR T_LPAREN assign_list T_SEMICOLON expr T_SEMICOLON assign_list T_RPAREN T_SEMICOLON .
+
+    $default  reduce using rule 41 (for_stmt)
