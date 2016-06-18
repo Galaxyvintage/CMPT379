@@ -167,6 +167,13 @@ extern_type_comma_list: extern_type T_COMMA extern_type_comma_list
                         $$ = slist;
                         delete $1;     
 		      }
+                      | /* Empty */
+                      {
+                        decafStmtList* slist = new decafStmtList();
+                        VarDefAST* e = new VarDefAST(string(""), string(""));
+                        slist->push_front(e);
+                        $$ = slist;
+		      }
                       ;
 
 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls T_RCB

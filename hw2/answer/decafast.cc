@@ -317,7 +317,7 @@ public:
   
   string str()
   {
-    if(VarType == "VoidType")
+    if(VarType.empty())
     {
       return string(""); // no argument       
     }
@@ -375,7 +375,7 @@ public:
     } 
     else
     {
-      return string("ArrayLocExpr") + "(" + Name + "," + getString(IndexExpr) + "," +")";
+      return string("ArrayLocExpr") + "(" + Name + "," + getString(IndexExpr) +")";
     }  
   }
 };  
