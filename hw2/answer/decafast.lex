@@ -81,7 +81,7 @@ return                     { return T_RETURN;     }
 \-                         { yylval.sval = new string("Minus"); return  T_MINUS; }
 \*                         { yylval.sval = new string("Mult");  return  T_MULT;  }
 \/                         { yylval.sval = new string("Div") ;  return  T_DIV;   }
-\!                         { return  T_NOT;       }
+\!                         { yylval.sval = new string("Not") ;  return  T_NOT;   }
 \=                         { return  T_ASSIGN;    }
 \<                         { yylval.sval = new string("Lt");    return  T_LT;    }
 \>                         { yylval.sval = new string("Gt");    return  T_RT;    }

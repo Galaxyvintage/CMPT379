@@ -624,8 +624,6 @@ expr: value
       $$ = e;
       delete $1;
     }
-
-// | unary_op expr
     ;
 value: T_ID T_LSB expr T_RSB
      {         

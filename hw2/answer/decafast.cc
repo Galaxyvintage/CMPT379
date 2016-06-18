@@ -534,9 +534,20 @@ public:
   }
 };
 
-class ExprAST : public decafAST
+class UnaryExprAST : public decafAST
 {
-  
+  string UnaryOp;
+  decafStmtList* RightValue; 
 
+public: 
+  UnaryExprAST(string op,  decafStmtList* right) : UnaryOp(op), RightValue(right){}
+  ~UnaryExprAST()
+   {
+     if(RightValue != NULL) { delete RightValue; }
+   }
 
+  string str()
+  {
+    return string("UnaryExpr") + "(" + UnaryOp + "," + getString(RightValue) + ")";
+  }
 };
