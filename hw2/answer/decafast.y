@@ -208,7 +208,7 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
   
               for(int x = 0; x < $2->size(); ++x)
               {
-                e = new FieldAST((*$2)[x],*$3,"Scalar");
+                e = new FieldAST((*$2)[x],*$3,"Scalar", false);
                 slist->push_back(e);
               }    
   
@@ -229,7 +229,7 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
 
               for(int x = 0; x < $2->size(); ++x)
               {
-                e = new FieldAST((*$2)[x],FieldType, FieldSize);
+                e = new FieldAST((*$2)[x],FieldType, FieldSize,false);
                 slist->push_back(e);
               }    
 
@@ -242,16 +242,17 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
 	    {
               decafStmtList* slist = new decafStmtList();
               FieldAST* e;
-  
+
+
               for(int x = 0; x < $2->size(); ++x)
               {    
-                e = new FieldAST((*$2)[x],*$3,(ConstantAST*)$5);
-                e->setAssignment(true);
+                e = new FieldAST((*$2)[x],*$3,$5->str(),true);
                 slist->push_back(e);
               }    
   
               delete $2;
               delete $3;
+              delete $5;
               $$ = slist; 
             }
   ;

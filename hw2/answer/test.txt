@@ -3,6 +3,7 @@ extern func print_int(int) void;
 
 package foo
 {
+        var x,y int = 2;
 	func main() int
 	{
           print_int(list[x]);

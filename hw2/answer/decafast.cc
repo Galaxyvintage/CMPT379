@@ -182,8 +182,7 @@ class ConstantAST : public decafAST
   string Value;
 
 public:
-  ConstantAST(string type, string value) : Type(type), Value(value){}
-  ~ConstantAST(){}  
+  ConstantAST(string type, string value) : Type(type), Value(value){} 
   
   string str()
   {
@@ -209,37 +208,22 @@ class FieldAST : public decafAST
 {
   string Name;
   string FieldType;
-  string FieldSize;
-  ConstantAST* AssignExpr;
+  string Expr;
   bool Assignment;
 public:
   
-  // Assignment == false 
-  FieldAST(string name, string type, string size) 
-    : Name(name), FieldType(type), FieldSize(size), Assignment(false), AssignExpr(NULL){}
-  
-  // Assignment == true 
-  FieldAST(string name, string type, ConstantAST* expr) 
-           : Name(name), FieldType(type), AssignExpr(expr), Assignment(true){}
-  ~FieldAST()
-  {
-    if(AssignExpr != NULL) { delete AssignExpr; }  
-  }
-  
-  void setAssignment(bool flag)
-  {
-    Assignment = flag;
-  }
-  
+  FieldAST(string name, string type, string argument, bool isAssign) 
+    : Name(name), FieldType(type), Expr(argument), Assignment(isAssign) {}
+    
   string str()
   {
     if(Assignment == true)
     {
-      return string("AssignGlobalVar") + "(" + Name + "," + FieldType + "," + getString(AssignExpr) +")"; 
+      return string("AssignGlobalVar") + "(" + Name + "," + FieldType + "," + Expr +")"; 
     } 
     else
     {
-      return string("FieldDecl") + "(" + Name + "," + FieldType + "," + FieldSize + ")";
+      return string("FieldDecl") + "(" + Name + "," + FieldType + "," + Expr + ")";
     }
   }
 };
@@ -359,9 +343,12 @@ class ValueAST : public decafAST
   bool ArrayFlag;
 
 public: 
-  ValueAST(string name) : Name(name), ArrayFlag(false) {}
+  ValueAST(string name) : Name(name), ArrayFlag(false), IndexExpr(NULL) {}
   ValueAST(string name, decafStmtList* index) : Name(name), IndexExpr(index), ArrayFlag(true){}
-  ~ValueAST(){}
+  ~ValueAST()
+  {
+    if(IndexExpr != NULL) { delete IndexExpr; }
+  }
    
   string getID() { return Name; }  
   decafStmtList* getIndexExpr() { return IndexExpr; }
