@@ -24,7 +24,6 @@ using namespace std;
   std::deque<string> *deque_ptr;
   int ival;
   array_info arrinfo;
-
 }
 
 %token T_FUNC
@@ -105,10 +104,6 @@ using namespace std;
 %type <deque_ptr> id_comma_list 
 %type <sval> extern_type decaf_type method_type bool_constant
 %type <arrinfo> array_type
-
-
-
-
 %%
 
 /* start */
@@ -205,7 +200,7 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
             { 
               decafStmtList* slist = new decafStmtList();
               FieldAST* e;
-  
+
               for(int x = 0; x < $2->size(); ++x)
               {
                 e = new FieldAST((*$2)[x],*$3,"Scalar", false);
@@ -219,6 +214,7 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
 
           | T_VAR id_comma_list array_type T_SEMICOLON  
             {
+
               decafStmtList* slist = new decafStmtList();
               string FieldType;
               string FieldSize; 
@@ -233,44 +229,53 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
                 slist->push_back(e);
               }    
 
-              delete $2; 
+              delete $2;
               delete $3.type;
               delete $3.size;
               $$ = slist;
 	    }
-	    | T_VAR id_comma_list decaf_type T_ASSIGN expr T_SEMICOLON
+
+	  | T_VAR id_comma_list decaf_type T_ASSIGN expr T_SEMICOLON
 	    {
               decafStmtList* slist = new decafStmtList();
               FieldAST* e;
+ 
+	      // assign more than one variable in the same line 
+              if($2->size() > 1)  
+              {
+                return 1;
+	      }
 
-
-              for(int x = 0; x < $2->size(); ++x)
-              {    
-                e = new FieldAST((*$2)[x],*$3,$5->str(),true);
-                slist->push_back(e);
-              }    
-  
+              e = new FieldAST((*$2)[0],*$3,$5->str(),true);
+              slist->push_back(e);
+            
               delete $2;
               delete $3;
               delete $5;
               $$ = slist; 
             }
-  ;
-id_comma_list: T_ID T_COMMA id_comma_list
+ ;
+
+id_comma_list: T_ID T_COMMA  id_comma_list
 {
-  deque<string>* ilist = $3;
+  deque<string>* ilist;
+  if($3 == NULL) 
+  { 
+    ilist = new deque<string>;
+  }
+  else
+  {
+    ilist = $3;
+  }
+
   ilist->push_front(*$1);
   delete $1;
   $$ = ilist;
 }
-              | T_ID   
-{
-  deque<string>* ilist = new deque<string>;
-  ilist->push_front(*$1);
-  delete $1;
-  $$ = ilist; 
-}          
-  ;   
+| /* Empty */   
+{ $$ = NULL; }
+;
+              
 method_decls: /* Empty(zero or more) */
             { $$ = NULL; }
             | method_decl method_decls
@@ -705,8 +710,15 @@ extern_type: T_STRINGTYPE
            ;
 %%  
 
+
+
+/* 
+   TODO: Need a way to keep track of all the pointers and free them 
+         when the parser encounters a syntax error    
+*/
 int main()
 {
+  
   // parse the input and create the abstract syntax tree
   int retval = yyparse();
   return(retval >= 1 ? EXIT_FAILURE : EXIT_SUCCESS);
