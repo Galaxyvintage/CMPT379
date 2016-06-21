@@ -1,0 +1,617 @@
+Nonterminals useless in grammar
+
+   constant
+   array_type
+   extern_type
+
+
+Terminals unused in grammar
+
+   T_STRINGTYPE
+   T_NULL
+   T_BREAK
+   T_CONTINUE
+   T_EXTERN
+   T_TRUE
+   T_FALSE
+   T_IF
+   T_ELSE
+   T_FOR
+   T_WHILE
+   T_RETURN
+   T_LPAREN
+   T_RPAREN
+   T_LSB
+   T_RSB
+   T_EQ
+   T_LEQ
+   T_GEQ
+   T_NEQ
+   T_LEFTSHIFT
+   T_RIGHTSHIFT
+   T_AND
+   T_OR
+   T_PLUS
+   T_MINUS
+   T_MULT
+   T_DIV
+   T_NOT
+   T_ASSIGN
+   T_LT
+   T_RT
+   T_MOD
+   T_DOT
+   T_COMMENT
+   T_INTCONSTANT
+   T_CHARCONSTANT
+   T_STRINGCONSTANT
+   T_BOOLCONSTANT
+   T_WHITESPACE
+   T_UNARYMINUS
+   T_ERROR_1
+   T_ERROR_2
+   T_ERROR_3
+
+
+Rules useless in grammar
+
+   25 constant: T_INTCONSTANT
+   26         | T_CHARCONSTANT
+   27         | T_BOOLCONSTANT
+
+   28 array_type: T_LSB T_INTCONSTANT T_RSB decaf_type
+
+   29 extern_type: T_STRINGTYPE
+   30            | decaf_type
+
+
+Grammar
+
+    0 $accept: start $end
+
+    1 start: program
+
+    2 program: extern_list decafpackage
+
+    3 extern_list: %empty
+
+    4 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls T_RCB
+
+    5 field_decls: %empty
+    6            | field_decl field_decls
+
+    7 field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
+
+    8 id_comma_list: T_ID T_COMMA id_comma_list
+    9              | T_ID
+
+   10 argument_list: %empty
+   11              | id_type_comma_list
+
+   12 id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list
+   13                   | T_ID decaf_type
+
+   14 method_decls: %empty
+   15             | method_decl method_decls
+
+   16 method_decl: T_FUNC T_ID T_LCB argument_list T_RCB method_type block
+
+   17 var_decls: %empty
+   18          | var_decl var_decls
+
+   19 var_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
+
+   20 block: T_LCB var_decls T_RCB
+
+   21 decaf_type: T_INTTYPE
+   22           | T_BOOLTYPE
+
+   23 method_type: T_VOID
+   24            | decaf_type
+
+
+Terminals, with rules where they appear
+
+$end (0) 0
+error (256)
+T_FUNC (258) 16
+T_PACKAGE (259) 4
+T_VAR (260) 7 19
+T_INTTYPE (261) 21
+T_STRINGTYPE (262)
+T_BOOLTYPE (263) 22
+T_VOID (264) 23
+T_NULL (265)
+T_BREAK (266)
+T_CONTINUE (267)
+T_EXTERN (268)
+T_TRUE (269)
+T_FALSE (270)
+T_IF (271)
+T_ELSE (272)
+T_FOR (273)
+T_WHILE (274)
+T_RETURN (275)
+T_LCB (276) 4 16 20
+T_RCB (277) 4 16 20
+T_LPAREN (278)
+T_RPAREN (279)
+T_LSB (280)
+T_RSB (281)
+T_COMMA (282) 8 12
+T_SEMICOLON (283) 7 19
+T_EQ (284)
+T_LEQ (285)
+T_GEQ (286)
+T_NEQ (287)
+T_LEFTSHIFT (288)
+T_RIGHTSHIFT (289)
+T_AND (290)
+T_OR (291)
+T_PLUS (292)
+T_MINUS (293)
+T_MULT (294)
+T_DIV (295)
+T_NOT (296)
+T_ASSIGN (297)
+T_LT (298)
+T_RT (299)
+T_MOD (300)
+T_DOT (301)
+T_COMMENT (302)
+T_INTCONSTANT (303)
+T_CHARCONSTANT (304)
+T_STRINGCONSTANT (305)
+T_BOOLCONSTANT (306)
+T_ID (307) 4 8 9 12 13 16
+T_WHITESPACE (308)
+T_UNARYMINUS (309)
+T_ERROR_1 (310)
+T_ERROR_2 (311)
+T_ERROR_3 (312)
+
+
+Nonterminals, with rules where they appear
+
+$accept (58)
+    on left: 0
+start (59)
+    on left: 1, on right: 0
+program (60)
+    on left: 2, on right: 1
+extern_list (61)
+    on left: 3, on right: 2
+decafpackage (62)
+    on left: 4, on right: 2
+field_decls (63)
+    on left: 5 6, on right: 4 6
+field_decl (64)
+    on left: 7, on right: 6
+id_comma_list (65)
+    on left: 8 9, on right: 7 8 19
+argument_list (66)
+    on left: 10 11, on right: 16
+id_type_comma_list (67)
+    on left: 12 13, on right: 11 12
+method_decls (68)
+    on left: 14 15, on right: 4 15
+method_decl (69)
+    on left: 16, on right: 15
+var_decls (70)
+    on left: 17 18, on right: 18 20
+var_decl (71)
+    on left: 19, on right: 18
+block (72)
+    on left: 20, on right: 16
+decaf_type (73)
+    on left: 21 22, on right: 7 12 13 19 24
+method_type (74)
+    on left: 23 24, on right: 16
+
+
+State 0
+
+    0 $accept: . start $end
+
+    $default  reduce using rule 3 (extern_list)
+
+    start        go to state 1
+    program      go to state 2
+    extern_list  go to state 3
+
+
+State 1
+
+    0 $accept: start . $end
+
+    $end  shift, and go to state 4
+
+
+State 2
+
+    1 start: program .
+
+    $default  reduce using rule 1 (start)
+
+
+State 3
+
+    2 program: extern_list . decafpackage
+
+    T_PACKAGE  shift, and go to state 5
+
+    decafpackage  go to state 6
+
+
+State 4
+
+    0 $accept: start $end .
+
+    $default  accept
+
+
+State 5
+
+    4 decafpackage: T_PACKAGE . T_ID T_LCB field_decls method_decls T_RCB
+
+    T_ID  shift, and go to state 7
+
+
+State 6
+
+    2 program: extern_list decafpackage .
+
+    $default  reduce using rule 2 (program)
+
+
+State 7
+
+    4 decafpackage: T_PACKAGE T_ID . T_LCB field_decls method_decls T_RCB
+
+    T_LCB  shift, and go to state 8
+
+
+State 8
+
+    4 decafpackage: T_PACKAGE T_ID T_LCB . field_decls method_decls T_RCB
+
+    T_VAR  shift, and go to state 9
+
+    $default  reduce using rule 5 (field_decls)
+
+    field_decls  go to state 10
+    field_decl   go to state 11
+
+
+State 9
+
+    7 field_decl: T_VAR . id_comma_list decaf_type T_SEMICOLON
+
+    T_ID  shift, and go to state 12
+
+    id_comma_list  go to state 13
+
+
+State 10
+
+    4 decafpackage: T_PACKAGE T_ID T_LCB field_decls . method_decls T_RCB
+
+    T_FUNC  shift, and go to state 14
+
+    $default  reduce using rule 14 (method_decls)
+
+    method_decls  go to state 15
+    method_decl   go to state 16
+
+
+State 11
+
+    6 field_decls: field_decl . field_decls
+
+    T_VAR  shift, and go to state 9
+
+    $default  reduce using rule 5 (field_decls)
+
+    field_decls  go to state 17
+    field_decl   go to state 11
+
+
+State 12
+
+    8 id_comma_list: T_ID . T_COMMA id_comma_list
+    9              | T_ID .
+
+    T_COMMA  shift, and go to state 18
+
+    $default  reduce using rule 9 (id_comma_list)
+
+
+State 13
+
+    7 field_decl: T_VAR id_comma_list . decaf_type T_SEMICOLON
+
+    T_INTTYPE   shift, and go to state 19
+    T_BOOLTYPE  shift, and go to state 20
+
+    decaf_type  go to state 21
+
+
+State 14
+
+   16 method_decl: T_FUNC . T_ID T_LCB argument_list T_RCB method_type block
+
+    T_ID  shift, and go to state 22
+
+
+State 15
+
+    4 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls . T_RCB
+
+    T_RCB  shift, and go to state 23
+
+
+State 16
+
+   15 method_decls: method_decl . method_decls
+
+    T_FUNC  shift, and go to state 14
+
+    $default  reduce using rule 14 (method_decls)
+
+    method_decls  go to state 24
+    method_decl   go to state 16
+
+
+State 17
+
+    6 field_decls: field_decl field_decls .
+
+    $default  reduce using rule 6 (field_decls)
+
+
+State 18
+
+    8 id_comma_list: T_ID T_COMMA . id_comma_list
+
+    T_ID  shift, and go to state 12
+
+    id_comma_list  go to state 25
+
+
+State 19
+
+   21 decaf_type: T_INTTYPE .
+
+    $default  reduce using rule 21 (decaf_type)
+
+
+State 20
+
+   22 decaf_type: T_BOOLTYPE .
+
+    $default  reduce using rule 22 (decaf_type)
+
+
+State 21
+
+    7 field_decl: T_VAR id_comma_list decaf_type . T_SEMICOLON
+
+    T_SEMICOLON  shift, and go to state 26
+
+
+State 22
+
+   16 method_decl: T_FUNC T_ID . T_LCB argument_list T_RCB method_type block
+
+    T_LCB  shift, and go to state 27
+
+
+State 23
+
+    4 decafpackage: T_PACKAGE T_ID T_LCB field_decls method_decls T_RCB .
+
+    $default  reduce using rule 4 (decafpackage)
+
+
+State 24
+
+   15 method_decls: method_decl method_decls .
+
+    $default  reduce using rule 15 (method_decls)
+
+
+State 25
+
+    8 id_comma_list: T_ID T_COMMA id_comma_list .
+
+    $default  reduce using rule 8 (id_comma_list)
+
+
+State 26
+
+    7 field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON .
+
+    $default  reduce using rule 7 (field_decl)
+
+
+State 27
+
+   16 method_decl: T_FUNC T_ID T_LCB . argument_list T_RCB method_type block
+
+    T_ID  shift, and go to state 28
+
+    $default  reduce using rule 10 (argument_list)
+
+    argument_list       go to state 29
+    id_type_comma_list  go to state 30
+
+
+State 28
+
+   12 id_type_comma_list: T_ID . decaf_type T_COMMA id_type_comma_list
+   13                   | T_ID . decaf_type
+
+    T_INTTYPE   shift, and go to state 19
+    T_BOOLTYPE  shift, and go to state 20
+
+    decaf_type  go to state 31
+
+
+State 29
+
+   16 method_decl: T_FUNC T_ID T_LCB argument_list . T_RCB method_type block
+
+    T_RCB  shift, and go to state 32
+
+
+State 30
+
+   11 argument_list: id_type_comma_list .
+
+    $default  reduce using rule 11 (argument_list)
+
+
+State 31
+
+   12 id_type_comma_list: T_ID decaf_type . T_COMMA id_type_comma_list
+   13                   | T_ID decaf_type .
+
+    T_COMMA  shift, and go to state 33
+
+    $default  reduce using rule 13 (id_type_comma_list)
+
+
+State 32
+
+   16 method_decl: T_FUNC T_ID T_LCB argument_list T_RCB . method_type block
+
+    T_INTTYPE   shift, and go to state 19
+    T_BOOLTYPE  shift, and go to state 20
+    T_VOID      shift, and go to state 34
+
+    decaf_type   go to state 35
+    method_type  go to state 36
+
+
+State 33
+
+   12 id_type_comma_list: T_ID decaf_type T_COMMA . id_type_comma_list
+
+    T_ID  shift, and go to state 28
+
+    id_type_comma_list  go to state 37
+
+
+State 34
+
+   23 method_type: T_VOID .
+
+    $default  reduce using rule 23 (method_type)
+
+
+State 35
+
+   24 method_type: decaf_type .
+
+    $default  reduce using rule 24 (method_type)
+
+
+State 36
+
+   16 method_decl: T_FUNC T_ID T_LCB argument_list T_RCB method_type . block
+
+    T_LCB  shift, and go to state 38
+
+    block  go to state 39
+
+
+State 37
+
+   12 id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list .
+
+    $default  reduce using rule 12 (id_type_comma_list)
+
+
+State 38
+
+   20 block: T_LCB . var_decls T_RCB
+
+    T_VAR  shift, and go to state 40
+
+    $default  reduce using rule 17 (var_decls)
+
+    var_decls  go to state 41
+    var_decl   go to state 42
+
+
+State 39
+
+   16 method_decl: T_FUNC T_ID T_LCB argument_list T_RCB method_type block .
+
+    $default  reduce using rule 16 (method_decl)
+
+
+State 40
+
+   19 var_decl: T_VAR . id_comma_list decaf_type T_SEMICOLON
+
+    T_ID  shift, and go to state 12
+
+    id_comma_list  go to state 43
+
+
+State 41
+
+   20 block: T_LCB var_decls . T_RCB
+
+    T_RCB  shift, and go to state 44
+
+
+State 42
+
+   18 var_decls: var_decl . var_decls
+
+    T_VAR  shift, and go to state 40
+
+    $default  reduce using rule 17 (var_decls)
+
+    var_decls  go to state 45
+    var_decl   go to state 42
+
+
+State 43
+
+   19 var_decl: T_VAR id_comma_list . decaf_type T_SEMICOLON
+
+    T_INTTYPE   shift, and go to state 19
+    T_BOOLTYPE  shift, and go to state 20
+
+    decaf_type  go to state 46
+
+
+State 44
+
+   20 block: T_LCB var_decls T_RCB .
+
+    $default  reduce using rule 20 (block)
+
+
+State 45
+
+   18 var_decls: var_decl var_decls .
+
+    $default  reduce using rule 18 (var_decls)
+
+
+State 46
+
+   19 var_decl: T_VAR id_comma_list decaf_type . T_SEMICOLON
+
+    T_SEMICOLON  shift, and go to state 47
+
+
+State 47
+
+   19 var_decl: T_VAR id_comma_list decaf_type T_SEMICOLON .
+
+    $default  reduce using rule 19 (var_decl)

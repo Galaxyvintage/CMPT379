@@ -1,0 +1,16 @@
+extern func print_string(void) void;
+extern func print_int(int) void;
+
+package foo
+{
+  var hello bool;
+  var a,b [100]int;
+  var c bool = true;
+ 
+  func displayList(start int, len int) void {
+    var a,c int;
+    var b bool;
+    print_string("List:\n");
+    {{}}
+  }
+}

@@ -259,21 +259,19 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
 id_comma_list: T_ID T_COMMA  id_comma_list
 {
   deque<string>* ilist;
-  if($3 == NULL) 
-  { 
-    ilist = new deque<string>;
-  }
-  else
-  {
-    ilist = $3;
-  }
-
+  ilist = $3;
   ilist->push_front(*$1);
   delete $1;
   $$ = ilist;
 }
-| /* Empty */   
-{ $$ = NULL; }
+| T_ID 
+{
+  deque<string>* ilist;
+  ilist = new deque<string>;
+  ilist->push_front(*$1);
+  delete $1;
+  $$ = ilist;
+}
 ;
               
 method_decls: /* Empty(zero or more) */

@@ -1,0 +1,1 @@
+Program(None,Package(QuickSort,None,Method(swap,VoidType,VarDef(leftPtr,IntType),VarDef(rightPtr,IntType),MethodBlock(VarDef(temp,IntType),AssignVar(temp,ArrayLocExpr(list,VariableExpr(leftPtr))),AssignArrayLoc(list,VariableExpr(leftPtr),ArrayLocExpr(list,VariableExpr(rightPtr))),AssignArrayLoc(list,VariableExpr(rightPtr),VariableExpr(temp))))))
