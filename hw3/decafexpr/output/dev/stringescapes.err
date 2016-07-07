@@ -1,0 +1,8 @@
+output prefix: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/stringescapes
+llvmas: /usr/lib/llvm-3.8/bin/llvm-as
+llc: /usr/lib/llvm-3.8/bin/llc
+cc: gcc
+codegen: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decafexpr
+stdlib: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decaf-stdlib.c
+generating llvm code:/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decafexpr ... failed (-11)
+codegen failed

@@ -1,0 +1,10 @@
+Warning: redefining previously defined identifier: 
+defined variable: x, with type: int, on line number: 6
+using decl on line number: 6
+using decl on line number: 6
+; ModuleID = 'Test'
+
+define i32 @main() {
+entry:
+  ret i32 0
+}

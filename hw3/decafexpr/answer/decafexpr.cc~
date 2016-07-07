@@ -1,0 +1,995 @@
+ 
+#include "decafexpr-defs.h"
+#include <ostream>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <list>
+#include <map>
+
+#ifndef YYTOKENTYPE
+#include "decafexpr.tab.h"
+#endif
+
+using namespace std;
+
+// empty list of symbol tables 
+symbol_table_list symtbl;
+
+// debug_flag
+bool debug_flag = false;
+
+// default return value
+llvm::Value* returnValue;
+
+void debug_print(bool flag, string output)
+{
+  if(flag == true) { cout<<output<<endl;}
+}
+
+
+descriptor* access_symtbl(string id)
+{
+  for(symbol_table_list::iterator i = symtbl.begin(); i != symtbl.end(); ++i)
+  {
+    symbol_table::iterator find_id;
+    if((find_id = i->find(id)) != i->end())
+    {
+      return find_id->second; // second refers to descriptor* in map<string, descriptor*> 
+    }
+  } 
+  return NULL;
+}
+
+
+descriptor* access_current_scope(string id)
+{
+  symbol_table i = symtbl.front();
+  symbol_table::iterator find_id;
+  if((find_id = i.find(id)) != i.end())
+  {
+    return find_id->second; // second refers to descriptor* in map<string, descriptor*> 
+  }
+  return NULL;
+}
+
+void scope_check(string id)
+{
+  if(access_current_scope(id) != NULL)
+  {
+    //cerr<<"Warning: redefining previously defined identifier: "<< id <<endl;
+  }
+}
+
+void print_descriptor(string id)
+{
+  descriptor* d = access_symtbl(id);
+  cerr<<"defined variable: "<< id
+      <<", with type: "     << d->type
+      <<", on line number: "<< d->lineno <<endl;
+} 
+
+void free_descriptors(symbol_table table)
+{
+  for(symbol_table::iterator i = table.begin(); i != table.end(); ++i)
+  {
+    delete(i->second);
+  } 
+} 
+
+llvm::Type* getType(string type)
+{
+  llvm::Type* LType;
+  if(type == "IntType")         { LType = Builder.getInt32Ty();  } // 32 bit int
+  else if(type == "BoolType")   { LType = Builder.getInt1Ty();   } // 1 bit int  
+  else if(type == "VoidType")   { LType = Builder.getVoidTy();   } // void 
+  else if(type == "StringType") { LType = Builder.getInt8PtrTy();} // ptr to array of bytes
+}
+
+int getOperator(string op)
+{
+  if(op == "Plus")       { return T_PLUS;}
+  if(op == "Minus")      { return T_MINUS;  }
+  if(op == "Mult")       { return 2;  }
+  if(op == "Div")        { return 3;  }
+  if(op == "LeftShift")  { return 4;  }
+  if(op == "RightShift") { return 5;  }
+  if(op == "Mod")        { return 6;  } 
+  if(op == "Eq")         { return 7;  }
+  if(op == "Neq")        { return 8;  }
+  if(op == "LT")         { return 9;  }
+  if(op == "LEQ")        { return 10; }
+  if(op == "GT")         { return 11; }
+  if(op == "Geq")        { return 12; }
+  if(op == "And")        { return T_AND; }
+  if(op == "Or")         { return 14; }
+  
+  return -1;
+}
+
+template <class T>
+llvm::Value *listCodegen(list<T> vec)
+{
+  llvm::Value *Val = NULL;
+  for (typename list<T>::iterator i = vec.begin(); i != vec.end(); i++)
+  { 
+    llvm::Value *j = (*i)->Codegen();
+    if (j != NULL) { Val = j; }
+  }	
+  return Val;
+}
+
+
+/// decafAST - Base class for all abstract syntax tree nodes.
+class decafAST 
+{
+public:
+  virtual ~decafAST() {}
+  virtual string str()  { return string(""); }
+  virtual string str_2(){ return string(""); }
+  virtual llvm::Value *Codegen() = 0;
+};
+
+string char_to_ascii_string(string str)
+{
+  if(str.empty())
+  {
+    return str;
+  }
+  
+  // str[0] the single quote character '
+  // str[1] could be the character or backslash
+  
+  stringstream ss;
+  int ascii = 0;
+
+  // if the character is not an escaped character 
+  // then str[1] is the character 
+  if(str[1] != '\\')
+  {
+    //cout<<"str[1] "<<str[1]<<endl;
+    ascii = int(str[1]);
+  } 
+  // if the character is an escaped character with backslash
+  // then str[2] is the character
+  else
+  {
+    // cout<<"str[2] "<<str[2]<<endl;
+    switch(str[2])
+    { 
+    case 'a': ascii = 7; break;
+    case 'b': ascii = 8; break;
+    case 't': ascii = 9; break;
+    case 'n': ascii = 10; break;
+    case 'v': ascii = 11; break;
+    case 'f': ascii = 12; break;
+    case 'r': ascii = 13; break;
+    case '\\': ascii = 92; break;
+    case '\'': ascii = 39; break;
+    case '\"': ascii = 34; break;
+    }
+  }
+  //cout<<"ascii: "<<ascii<<endl;
+  ss << ascii;
+  //cout<<"ss.str(): "<<ss.str()<<endl;
+  return string(ss.str());
+}
+
+string getString(decafAST *d) 
+{
+  if (d != NULL) 
+  {
+    return d->str();
+  } 
+  else 
+  {
+    return string("None");
+  }
+}
+
+
+template <class T>
+string commaList(list<T> vec) 
+{
+  string s("");
+  for (typename list<T>::iterator i = vec.begin(); i != vec.end(); i++)
+  { 
+    s = s + (s.empty() ? string("") : string(",")) + (*i)->str(); 
+  }   
+    
+  if (s.empty()) 
+  {
+    s = string("None");
+  }
+   
+  return s;
+}
+
+
+/// decafStmtList - List of Decaf statements
+class decafStmtList : public decafAST {
+  list<decafAST *> stmts;
+public:
+  decafStmtList() {}
+  ~decafStmtList()
+  {
+    for (list<decafAST *>::iterator i = stmts.begin(); i != stmts.end(); i++)
+    { 
+      delete *i;
+    }
+  }
+
+  int size() { return stmts.size(); }
+  void push_front(decafAST *e) { stmts.push_front(e); }
+  void push_back(decafAST *e)  { stmts.push_back(e);  }
+
+  decafAST* pop_front()       
+  { 
+    decafAST* e = stmts.front();
+    stmts.pop_front(); 
+    return e;
+  }
+
+  decafAST* pop_back()       
+  { 
+    decafAST* e = stmts.back();
+    stmts.pop_back(); 
+    return e;
+  }
+
+  list<decafAST*> return_list()
+  {
+    return stmts;
+  }
+  string str()    { return commaList<class decafAST *>(stmts); }
+  llvm::Value *Codegen() { return listCodegen<decafAST *>(stmts); }
+};
+
+class VarDefAST : public decafAST
+{
+  string Name;
+  string VarType;
+
+public:
+  
+  VarDefAST(string name, string type) : Name(name), VarType(type) 
+  {
+
+  }
+  ~VarDefAST(){};
+  
+  string str()
+  {
+    if(VarType.empty())
+    {
+      return string(""); // no argument       
+    }
+    else if(Name.empty())
+    {
+      return string("VarDef") + "(" + VarType + ")";
+    }
+    else
+    {
+      return string("VarDef") + "(" + Name + "," + VarType + ")";
+    }
+  }  
+
+  string getVarType()
+  {
+    return VarType;
+  }
+
+  llvm::Value *Codegen() 
+  {
+    llvm::Type  *LType = getType(VarType);
+    llvm::AllocaInst *Alloca = Builder.CreateAlloca(LType, nullptr, Name);
+    
+    scope_check(Name);
+    descriptor* d = new descriptor;
+    d->type = VarType;
+    d->lineno = lineno;
+    d->alloca_ptr = Alloca;
+    (symtbl.front())[Name] = d;
+    return (llvm::Value*)Alloca;
+  }
+};
+
+class ConstantAST : public decafAST
+{
+  string Type;
+  string Value;
+
+public:
+  ConstantAST(string type, string value) : Type(type), Value(value)
+  {
+    descriptor* d = access_current_scope(value);
+    if(d != NULL)
+    {
+      //cout<<" // using decl on line: "<<d->lineno;
+    }   
+  } 
+  
+  string str()
+  {
+    string Name;
+    if(Type == string("IntType"))
+    {
+      Name = string("NumberExpr");
+    }
+    else if(Type == string("StringType"))
+    {
+      Name = string("StringConstant");
+    }
+    else if(Type == string("BoolType"))
+    {
+      Name = string("BoolExpr");
+    }    
+    return Name + "(" + Value + ")";
+  }
+  llvm::Value *Codegen() 
+  {
+    llvm::Constant *Const;
+
+    if(Type == "IntType")
+    { 
+      Const = Builder.getInt32(atoi(Value.c_str()));
+    }
+    else if(Type == "BoolType")
+    { 
+      if(Value == "True" ) { Const = Builder.getInt1(1);}
+      if(Value == "False") { Const = Builder.getInt1(0);}
+    }
+    return (llvm::Value*)Const;
+  }
+};
+
+
+class ExternAST : public decafAST
+{
+  string Name;
+  decafStmtList* ExternTypeList;
+  string MethodType; 
+
+public: 
+  ExternAST(string name, decafStmtList* elist, string mtype) 
+  : Name(name), ExternTypeList(elist), MethodType(mtype){}  
+  ~ExternAST()  
+  {
+    if(ExternTypeList != NULL) { delete ExternTypeList; }
+  }
+
+  string str()
+  {
+    return string("ExternFunction") + "(" + Name + "," + MethodType + "," + getString(ExternTypeList)+ ")";
+  }
+  llvm::Value *Codegen() 
+  {
+    debug_print(debug_flag,"...Extern Codegen Begins...");
+
+    llvm::Value *val = NULL;
+    //TheModule->setModuleIdentifier(llvm::StringRef(Name)); 
+    llvm::Type* returnTy = getType(MethodType);
+    std::vector<llvm::Type*> args;
+     
+    if (NULL != ExternTypeList) 
+    {
+      list<decafAST*> stmts = ExternTypeList->return_list();  
+      for (list<decafAST*>::iterator i = stmts.begin(); i != stmts.end(); i++)
+      { 
+        llvm::Type* ArgType = getType(((VarDefAST*)(*i))->getVarType()); 
+        args.push_back(ArgType);    
+      }        
+    }
+                 
+    llvm::Function *func = llvm::Function::Create(llvm::FunctionType::get(returnTy,args,false),
+                                                  llvm::Function::ExternalLinkage,
+                                                  Name,
+                                                  TheModule
+ 	 					 );
+    val = (llvm::Value*)func;
+    scope_check(Name);
+    descriptor* d = new descriptor;
+    d->type       = MethodType;
+    d->lineno     = lineno;
+    d->func_ptr   = func;
+    (symtbl.front())[Name] = d; 
+    debug_print(debug_flag,"...Extern Codegen Ends...");
+    return val; 
+  }
+};
+
+class PackageAST : public decafAST 
+{
+  string Name;
+  decafStmtList *FieldDeclList;
+  decafStmtList *MethodDeclList;
+
+public:
+  PackageAST(string name, decafStmtList *fieldlist, decafStmtList *methodlist) 
+	    : Name(name), FieldDeclList(fieldlist), MethodDeclList(methodlist) {}
+  ~PackageAST() 
+  { 
+    if (FieldDeclList  != NULL) { delete FieldDeclList;  }
+    if (MethodDeclList != NULL) { delete MethodDeclList; }
+  }
+
+  string str() 
+  { 
+    return string("Package") + "(" + Name + "," + getString(FieldDeclList) + "," + getString(MethodDeclList) + ")";
+  }
+  llvm::Value *Codegen() 
+  {
+    debug_print(debug_flag,"...Package Codegen Begins...");
+    llvm::Value *val = NULL;
+
+    TheModule->setModuleIdentifier(llvm::StringRef(Name)); 
+    
+    if (NULL != FieldDeclList) 
+    {
+      val = FieldDeclList->Codegen();
+    }
+    if (NULL != MethodDeclList) 
+    {
+      val = MethodDeclList->Codegen();
+    } 
+    
+    debug_print(debug_flag,"...Package Codegen Ends...");
+    // Q: should we enter the class name into the symbol table?
+    return val; 
+  }
+};
+
+// ProgramAST - the decaf program
+class ProgramAST : public decafAST 
+{
+  decafStmtList *ExternList;
+  PackageAST *PackageDef;
+
+public:
+  ProgramAST(decafStmtList *externs, PackageAST *c) : ExternList(externs), PackageDef(c) {}
+  ~ProgramAST() 
+  { 
+    if (ExternList != NULL)  { delete ExternList; } 
+    if (PackageDef != NULL)  { delete PackageDef; }
+  }
+
+  string str() { return string("Program") + "(" + getString(ExternList) + "," + getString(PackageDef) + ")"; }
+  llvm::Value *Codegen() 
+  {
+    llvm::Value *val = NULL;
+   
+    if (NULL != ExternList)
+    {
+      val = ExternList->Codegen();
+    }
+    if (NULL != PackageDef) 
+    {
+      val = PackageDef->Codegen();
+    } 
+    else 
+    {
+      throw runtime_error("no package definition in decaf program");
+    }
+    return val; 
+  }
+};
+
+
+class FieldAST : public decafAST
+{
+  string Name;
+  string FieldType;
+  string FieldSize;
+  decafAST* Expr;
+  bool Assignment;
+public:
+  
+  FieldAST(string name, string type, string size, bool isAssign) 
+    : Name(name), FieldType(type), FieldSize(size), Assignment(isAssign) { }
+   
+  FieldAST(string name, string type, decafAST* argument, bool isAssign) 
+    : Name(name), FieldType(type), Expr(argument), Assignment(isAssign) { } 
+  ~FieldAST()
+  {
+    if(Expr != NULL) { delete Expr; }
+  }
+
+  string str()
+  {
+    if(Assignment == true)
+    {
+      return string("AssignGlobalVar") + "(" + Name + "," + FieldType + "," + getString(Expr) +")"; 
+    } 
+    else
+    {
+      return string("FieldDecl") + "(" + Name + "," + FieldType + "," + FieldSize + ")";
+    }
+  }
+  llvm::Value *Codegen() 
+  {
+    debug_print(debug_flag, "...FieldDecl Codegen Begins...");
+    llvm::Constant* Initializer;
+    llvm::Type* GVType = getType(FieldType); 
+    
+    if(Assignment)
+    {
+      Initializer = (llvm::Constant*)Expr->Codegen();
+    } 
+    else
+    {
+      if(GVType->isIntegerTy(32))     { Initializer = Builder.getInt32(0); }
+      else if(GVType->isIntegerTy(1)) { Initializer = Builder.getInt1(0) ; }
+      else if(GVType->isVoidTy())     { Initializer = NULL; }
+    }
+    llvm::GlobalVariable *GV = new llvm::GlobalVariable(*TheModule,
+                                                        GVType,
+                                                        false,
+                                                        llvm::GlobalValue::InternalLinkage,
+                                                        Initializer,
+                                                        Name
+						        )
+                                                        ;
+   
+    scope_check(Name);
+    descriptor* d = new descriptor;
+    d->type  = FieldType;
+    d->lineno = lineno;
+    d->gv_ptr = GV;
+    (symtbl.front())[Name] = d;
+    debug_print(debug_flag, "...FieldDecl Codegen Ends...");
+    return GV;
+  }
+};
+
+
+class BlockAST : public decafAST
+{
+  decafStmtList* VarDeclList;
+  decafStmtList*  StmtList;
+  bool MethodBlock;
+   
+public:
+  BlockAST(decafStmtList* varlist, decafStmtList* stmtlist)
+         : VarDeclList(varlist), StmtList(stmtlist),MethodBlock(false){}
+  ~BlockAST()
+  {
+    if(VarDeclList != NULL) { delete VarDeclList; }
+    if(StmtList    != NULL) { delete StmtList;    }
+  }
+    
+  void setMethodBlock(bool flag)
+  {
+    MethodBlock = flag;
+  }
+  
+  string str()
+  {
+    string Name;
+    if(MethodBlock == true)
+    {
+      Name = string("MethodBlock");
+    }
+    else
+    {
+      Name = string("Block");
+    } 
+    return Name + "(" + getString(VarDeclList) + "," + getString(StmtList) + ")";
+  }
+  llvm::Value *Codegen() 
+  {
+    if(VarDeclList != NULL) { VarDeclList->Codegen(); }
+    if(StmtList    != NULL) { StmtList->Codegen();    } 
+    return NULL;
+  }
+};
+
+class MethodAST : public decafAST
+{
+  string Name;
+  string MethodType;
+  decafStmtList *ArgList;
+  BlockAST *Block;
+  
+public:
+  MethodAST(string name, string type, decafStmtList* alist, BlockAST* block) 
+    : Name(name), MethodType(type), ArgList(alist), Block(block){}
+  ~MethodAST()
+  {
+    if(ArgList != NULL) { delete ArgList;}
+    if(Block   != NULL) { delete Block;  }
+  }
+
+  string str()
+  {
+    return string("Method") 
+                  + "(" 
+                  + Name + "," + MethodType + "," + getString(ArgList) + "," + getString(Block)
+                  + ")";
+  }
+  llvm::Value *Codegen()
+  {
+    debug_print(debug_flag,"...Method Codegen Begins...");
+
+    llvm::Type *returnTy = getType(MethodType);
+    
+    // create default return 
+    if(returnTy->isIntegerTy(32))     
+    { returnValue = Builder.getInt32(0); }
+    else //if(returnTy->isIntegerTy(1))  
+    { returnValue = Builder.getInt1(1) ; }    
+    
+    list<decafAST*> stmts;
+
+    if(ArgList != NULL) 
+    {
+      stmts = ArgList->return_list(); 
+      ArgList->Codegen();
+    }
+    
+    // fill in the vector with parameter types 
+    vector<llvm::Type *> args;
+  
+    
+    for (list<decafAST*>::iterator i = stmts.begin(); i != stmts.end(); i++)
+    { 
+      llvm::Type* ArgType = getType(((VarDefAST*)(*i))->getVarType()); 
+      args.push_back(ArgType);    
+    }     
+                   
+    llvm::Function *func = llvm::Function::Create(llvm::FunctionType::get(returnTy, args, false),
+                                                  llvm::Function::ExternalLinkage,
+                                                  Name,
+                                                  TheModule
+    						 );
+
+    // create a new basic block which contains a sequence of LLVM instructions 
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "entry", func);
+
+    // insert "entry" into symbol table (will be used in hw4)
+         
+    // all subsequent calls to IRBuilder wlil place instructions in this location 
+    Builder.SetInsertPoint(BB);
+     
+    if(Block != NULL) 
+    {
+      Block->Codegen(); 
+    }
+    
+    Builder.CreateRet(returnValue);
+    
+    verifyFunction(*func);
+
+    scope_check(Name);
+    descriptor* d = new descriptor;
+    d->type       = MethodType;
+    d->lineno     = lineno;
+    d->func_ptr   = func;
+    (symtbl.front())[Name] = d;  
+  
+    debug_print(debug_flag,"...Method Codegen Ends..."); 
+ 
+    return (llvm::Value*) func;
+  }
+};
+
+
+class MethodCallAST : public decafAST
+{
+  string Name;
+  decafStmtList *ArgList;
+
+public: 
+  MethodCallAST(string name, decafStmtList *alist) : Name(name), ArgList(alist)
+  {
+    
+  }  
+  ~MethodCallAST()
+  {
+    if(ArgList != NULL) { delete ArgList; }
+  }
+
+  string str()
+  {
+    return string("MethodCall") + "(" + Name + "," + getString(ArgList) +")"; 
+  }
+  llvm::Value *Codegen() 
+  {
+    debug_print(debug_flag, "...MethodCall Codegen Begins...");
+    llvm::Value* val = NULL;
+    llvm::Function *call;  
+  
+    list<decafAST*> stmts;
+    if(ArgList != NULL)
+    {
+      stmts = ArgList->return_list();
+    }
+   
+    vector<llvm::Value*> args;
+    for (list<decafAST*>::iterator i = stmts.begin(); i != stmts.end(); i++)
+    { 
+      llvm::Value* ArgValue = (*i)->Codegen(); 
+      args.push_back(ArgValue);    
+    }   
+
+    descriptor* d = access_symtbl(Name);
+    if( d != NULL) 
+    {
+      call = d->func_ptr; 
+      bool isVoid = call->getReturnType()->isVoidTy();
+      val = Builder.CreateCall(call, args, isVoid ? "" : "calltmp"); 
+    }
+    debug_print(debug_flag, "...MethodCall Codegen Ends...");
+    return val;
+  }
+};
+
+class ValueAST : public decafAST
+{
+  string Name;
+  decafStmtList* IndexExpr;
+  bool ArrayFlag;
+
+public: 
+  ValueAST(string name) : Name(name), ArrayFlag(false), IndexExpr(NULL) {}
+  ValueAST(string name, decafStmtList* index) : Name(name), IndexExpr(index), ArrayFlag(true){}
+  ~ValueAST()
+  {
+    if(IndexExpr != NULL) { delete IndexExpr; }
+  }
+   
+  string getID() { return Name; }  
+  decafStmtList* getIndexExpr() { return IndexExpr; }
+  bool isArray() { return ArrayFlag; }	
+	   
+  string str()
+  {
+    if(ArrayFlag == false)
+    {
+      return string("VariableExpr") + "(" + Name + ")";
+    } 
+    else
+    {
+      return string("ArrayLocExpr") + "(" + Name + "," + getString(IndexExpr) +")";
+    }  
+  }
+  llvm::Value *Codegen() 
+  {
+    // TODO:  1. handle error when d is null 
+    //        2. handle error when it is array_type (not needed for HW3)
+    descriptor* d = access_current_scope(Name);
+    llvm::Value *Val = (llvm::Value*) d->alloca_ptr;         
+    return Val;
+  }
+};  
+
+class AssignAST : public decafAST
+{
+  ValueAST* Value;
+  decafAST* Expr;
+   
+public: 
+  AssignAST(ValueAST* value, decafAST* expr) : Value(value), Expr(expr)
+  {
+    descriptor* d = access_current_scope(value->getID());
+    if(d != NULL)
+    {
+      //cout<<" // using decl on line: "<<d->lineno;
+    } 
+  }
+  ~AssignAST()
+  {
+    if(Value != NULL) { delete Value; }
+    if(Expr  != NULL) { delete Expr;  }
+  }
+  
+  string str()
+  {
+    string Name;
+    if(!(Value->isArray()))
+    {
+      Name = string("AssignVar");
+      return Name + "(" + Value->getID() + "," + getString(Expr) + ")";
+    }
+    else
+    {
+      Name = string("AssignArrayLoc");
+      return Name + "(" + Value->getID() + "," + getString(Value->getIndexExpr()) + ","+ getString(Expr) + ")";
+    } 
+  }
+  llvm::Value *Codegen() 
+  {
+    llvm::Value *val; 
+    llvm::AllocaInst *Alloca = (llvm::AllocaInst*)Value->Codegen();
+    llvm::Value *RValue = Expr->Codegen();
+    const llvm::PointerType *ptrTy = RValue->getType()->getPointerTo();
+    if(Alloca->getType() == ptrTy)
+    {
+      val = Builder.CreateStore(RValue, Alloca);
+    }  
+    return val;
+  }
+};
+
+class IfStmtAST : public decafAST
+{
+  decafAST* Condition;
+  BlockAST* IfBlock;
+  BlockAST* ElseBlock;
+
+public: 
+  IfStmtAST(decafAST* condition, BlockAST* if_block, BlockAST* else_block)
+           : Condition(condition), IfBlock(if_block), ElseBlock(else_block){} 
+  ~IfStmtAST()
+  {
+    if(Condition != NULL) { delete Condition; }
+    if(IfBlock   != NULL) { delete IfBlock;   }
+    if(ElseBlock != NULL) { delete ElseBlock; }
+  }  
+
+  string str()
+  {
+    return string("IfStmt") + "(" + getString(Condition) + "," + getString(IfBlock) + "," + getString(ElseBlock) + ")";
+  }
+  llvm::Value *Codegen() { return NULL; }
+};
+
+class WhileStmt : public decafAST
+{
+  decafAST* Condition;  
+  BlockAST* WhileBlock;
+
+public:
+  WhileStmt(decafAST* condition, BlockAST* while_block) : Condition(condition), WhileBlock(while_block){}
+  ~WhileStmt()
+  {
+    if(Condition  != NULL) { delete Condition;  }
+    if(WhileBlock != NULL) { delete WhileBlock; }
+  }
+  
+  string str()
+  { 
+    return string("WhileStmt") + "(" + getString(Condition) + "," + getString(WhileBlock) + ")";
+  }
+  llvm::Value *Codegen() { return NULL; }
+};
+
+class ForStmtAST : public decafAST
+{
+  AssignAST* PreAssign;
+  decafAST*  Condition;
+  AssignAST* LoopAssign;
+  BlockAST*  ForBlock;
+    
+public:
+  ForStmtAST(AssignAST* pre_assign, decafAST* condition, AssignAST* loop_assign, BlockAST* for_block)
+           : PreAssign(pre_assign), Condition(condition), LoopAssign(loop_assign), ForBlock(for_block){}  
+  ~ForStmtAST()
+  {
+    if(PreAssign  != NULL) { delete PreAssign;  }
+    if(Condition  != NULL) { delete Condition;  }
+    if(LoopAssign != NULL) { delete LoopAssign; }
+    if(ForBlock   != NULL) { delete ForBlock;   }
+  }
+
+  string str()
+  { 
+    return string("ForStmt") + "(" + getString(PreAssign)  + "," 
+                                   + getString(Condition)  + "," 
+                                   + getString(LoopAssign) + "," 
+                                   + getString(ForBlock)   +  ")";
+  }   
+  llvm::Value *Codegen() {}
+};
+
+class ReturnStmtAST : public decafAST
+{
+  decafAST* Expr;
+   
+public: 
+  ReturnStmtAST(decafAST* expr) : Expr(expr){}
+  ~ReturnStmtAST()
+  {
+    if(Expr != NULL) { delete Expr;}
+  }
+  
+  string str()
+  {
+    return string("ReturnStmt") + "(" + getString(Expr) +")";
+  }
+  llvm::Value *Codegen() 
+  {
+    llvm::Value* val;
+    llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
+    llvm::Function *func    = CurBB->getParent();
+    llvm::Type* returnTy    = func->getReturnType();
+   
+    if(Expr != NULL)
+    { 
+      val = Expr->Codegen();
+      returnValue = val;
+    }
+
+    return val;
+  }
+};
+
+class BreakStmtAST : public decafAST
+{
+public: 
+
+  string str()
+  {
+    return string("BreakStmt");
+  }
+  llvm::Value *Codegen() {}
+};
+
+class ContinueStmtAST : public decafAST
+{  
+public: 
+  string str()
+  {
+    return string("ContinueStmt");
+  }
+  llvm::Value *Codegen() {}
+};
+
+class BinaryExprAST : public decafAST
+{
+  string BinaryOp;
+  decafStmtList* LeftValue;
+  decafStmtList* RightValue; 
+
+public: 
+  BinaryExprAST(string op, decafStmtList* left, decafStmtList* right) 
+               : BinaryOp(op), LeftValue(left), RightValue(right){}
+  ~BinaryExprAST()
+   {
+     if(LeftValue != NULL)  { delete LeftValue; }
+     if(RightValue != NULL) { delete RightValue; }
+   }
+
+  string str()
+  {
+    return string("BinaryExpr") + "(" + BinaryOp + "," + getString(LeftValue) + "," + getString(RightValue) + ")";
+  }
+  llvm::Value *Codegen() 
+  { 
+    debug_print(debug_flag, "...BinaryOp Codegen Begins...");
+    llvm::Value* val = NULL;
+    switch(getOperator(BinaryOp))
+    {
+    case T_PLUS:  break;
+    case T_MINUS: break;
+    case T_AND: 
+    {  
+      llvm::Value *BValue = Builder.CreateAnd(LeftValue->Codegen(),RightValue->Codegen(),BinaryOp);
+      // promo boolean of type i1 to an integer 
+      val = Builder.CreateZExt(BValue, Builder.getInt32Ty(), "zexttmp");
+      break;
+    }
+    default: break;
+    }
+    debug_print(debug_flag, "...BinaryOp Codegen Ends...");
+    return val;
+  }
+};
+
+class UnaryExprAST : public decafAST
+{
+  string UnaryOp;
+  decafStmtList* RightValue; 
+
+public: 
+  UnaryExprAST(string op,  decafStmtList* right) : UnaryOp(op), RightValue(right){}
+  ~UnaryExprAST()
+   {
+     if(RightValue != NULL) { delete RightValue; }
+   }
+
+  string str()
+  {
+    return string("UnaryExpr") + "(" + UnaryOp + "," + getString(RightValue) + ")";
+  }
+  llvm::Value *Codegen() {}
+};

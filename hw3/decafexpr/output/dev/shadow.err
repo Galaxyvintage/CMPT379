@@ -1,0 +1,51 @@
+output prefix: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/shadow
+llvmas: /usr/lib/llvm-3.8/bin/llvm-as
+llc: /usr/lib/llvm-3.8/bin/llc
+cc: gcc
+codegen: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decafexpr
+stdlib: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decaf-stdlib.c
+generating llvm code:/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decafexpr ... ok
+; ModuleID = 'Test'
+
+declare void @print_int(i32)
+
+define i32 @main() {
+entry:
+  %x = alloca i32
+  %y = alloca i32
+  store i32 1, i32* %x
+  store i32 100, i32* %y
+  %0 = load i32, i32* %x
+  call void @print_int(i32 %0)
+  %1 = load i32, i32* %y
+  call void @print_int(i32 %1)
+  %x1 = alloca i32
+  store i32 2, i32* %x1
+  %2 = load i32, i32* %x1
+  call void @print_int(i32 %2)
+  %3 = load i32, i32* %y
+  call void @print_int(i32 %3)
+  %x2 = alloca i32
+  store i32 3, i32* %x2
+  %4 = load i32, i32* %x2
+  call void @print_int(i32 %4)
+  %5 = load i32, i32* %y
+  call void @print_int(i32 %5)
+  %x3 = alloca i32
+  store i32 4, i32* %x3
+  %6 = load i32, i32* %x3
+  call void @print_int(i32 %6)
+  %7 = load i32, i32* %y
+  call void @print_int(i32 %7)
+  %x4 = alloca i32
+  store i32 5, i32* %x4
+  %8 = load i32, i32* %x4
+  call void @print_int(i32 %8)
+  %9 = load i32, i32* %y
+  call void @print_int(i32 %9)
+  ret i32 0
+}
+assembling to bitcode:/usr/lib/llvm-3.8/bin/llvm-as "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/shadow.llvm" -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/shadow.llvm.bc" ... ok
+converting to native code:/usr/lib/llvm-3.8/bin/llc "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/shadow.llvm.bc" -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/shadow.llvm.s" ... ok
+linking:gcc -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/shadow.llvm.exec" "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/shadow.llvm.s" "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decaf-stdlib.c" ... ok
+running:/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/shadow.llvm.exec ... ok

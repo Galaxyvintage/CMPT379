@@ -1,0 +1,12 @@
+; ModuleID = 'foo'
+
+declare void @print_int(i32)
+
+define i32 @main() {
+entry:
+  %size = alloca i32
+  store i32 0, i32* %size
+  %0 = load i32, i32* %size
+  call void @print_int(i32 %0)
+  ret i32 0
+}

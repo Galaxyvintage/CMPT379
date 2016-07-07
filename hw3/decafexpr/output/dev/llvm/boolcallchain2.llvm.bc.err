@@ -1,0 +1,3 @@
+/usr/lib/llvm-3.8/bin/llvm-as: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/boolcallchain2.llvm:12:1: error: expected instruction opcode
+}
+^

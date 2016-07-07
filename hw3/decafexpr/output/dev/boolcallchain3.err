@@ -1,0 +1,88 @@
+output prefix: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/boolcallchain3
+llvmas: /usr/lib/llvm-3.8/bin/llvm-as
+llc: /usr/lib/llvm-3.8/bin/llc
+cc: gcc
+codegen: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decafexpr
+stdlib: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decaf-stdlib.c
+generating llvm code:/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decafexpr ... ok
+; ModuleID = 'Test'
+
+declare void @print_int(i32)
+
+define void @test3(i1) {
+entry:
+  %1 = load i1, i1* %a
+  %zexttmp = zext i1 %1 to i32
+  call void @print_int(i32 %zexttmp)
+  ret void
+  %a = alloca i1
+}
+
+define void @test2(i1) {
+entry:
+  %1 = load i1, i1* %a
+  %zexttmp = zext i1 %1 to i32
+  call void @print_int(i32 %zexttmp)
+  %2 = load i1, i1* %a
+  call void @test3(i1 %2)
+  ret void
+  %a = alloca i1
+}
+
+define void @test1(i1) {
+entry:
+  %1 = load i1, i1* %a
+  %zexttmp = zext i1 %1 to i32
+  call void @print_int(i32 %zexttmp)
+  %2 = load i1, i1* %a
+  call void @test2(i1 %2)
+  ret void
+}
+
+define i32 @main() {
+entry:
+  call void @test1(i1 true)
+  ret i32 0
+}
+assembling to bitcode:/usr/lib/llvm-3.8/bin/llvm-as "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/boolcallchain3.llvm" -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/boolcallchain3.llvm.bc" ... failed (1)
+/usr/lib/llvm-3.8/bin/llvm-as: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/boolcallchain3.llvm:12:1: error: expected instruction opcode
+}
+^
+converting to native code:/usr/lib/llvm-3.8/bin/llc "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/boolcallchain3.llvm.bc" -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/boolcallchain3.llvm.s" ... ok
+linking:gcc -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/boolcallchain3.llvm.exec" "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/boolcallchain3.llvm.s" "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decaf-stdlib.c" ... failed (1)
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 0 has invalid symbol index 11
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 1 has invalid symbol index 12
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 2 has invalid symbol index 2
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 3 has invalid symbol index 2
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 4 has invalid symbol index 11
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 5 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 6 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 7 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 8 has invalid symbol index 12
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 9 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 10 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 11 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 12 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 13 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 14 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 15 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 16 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 17 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 18 has invalid symbol index 13
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_info): relocation 19 has invalid symbol index 21
+/usr/bin/ld: /usr/lib/debug/usr/lib/x86_64-linux-gnu/crt1.o(.debug_line): relocation 0 has invalid symbol index 2
+/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../x86_64-linux-gnu/crt1.o: In function `_start':
+(.text+0x20): undefined reference to `main'
+collect2: error: ld returned 1 exit status
+running:/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/boolcallchain3.llvm.exec ...Traceback (most recent call last):
+  File "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/llvm-run", line 172, in <module>
+    result &= run("running", "%s.llvm.exec" % (out_prefix), ".run", None, out_prefix)
+  File "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/llvm-run", line 90, in run
+    retval = subprocess.call(shlex.split(cmd), stdin=infile, stdout=outoutfile, stderr=outerrfile)
+  File "/usr/lib/python2.7/subprocess.py", line 522, in call
+    return Popen(*popenargs, **kwargs).wait()
+  File "/usr/lib/python2.7/subprocess.py", line 710, in __init__
+    errread, errwrite)
+  File "/usr/lib/python2.7/subprocess.py", line 1327, in _execute_child
+    raise child_exception
+OSError: [Errno 2] No such file or directory

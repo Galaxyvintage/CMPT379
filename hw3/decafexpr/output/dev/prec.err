@@ -1,0 +1,36 @@
+output prefix: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/prec
+llvmas: /usr/lib/llvm-3.8/bin/llvm-as
+llc: /usr/lib/llvm-3.8/bin/llc
+cc: gcc
+codegen: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decafexpr
+stdlib: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decaf-stdlib.c
+generating llvm code:/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decafexpr ... ok
+; ModuleID = 'prec'
+
+declare void @print_int(i32)
+
+define i32 @main() {
+entry:
+  %a = alloca i32
+  %b = alloca i32
+  %d = alloca i32
+  %c = alloca i1
+  store i32 3, i32* %a
+  store i32 7, i32* %b
+  store i1 true, i1* %c
+  store i32 -3, i32* %d
+  %0 = load i32, i32* %a
+  call void @print_int(i32 %0)
+  %1 = load i32, i32* %b
+  call void @print_int(i32 %1)
+  %2 = load i1, i1* %c
+  %zexttmp = zext i1 %2 to i32
+  call void @print_int(i32 %zexttmp)
+  %3 = load i32, i32* %d
+  call void @print_int(i32 %3)
+  ret i32 0
+}
+assembling to bitcode:/usr/lib/llvm-3.8/bin/llvm-as "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/prec.llvm" -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/prec.llvm.bc" ... ok
+converting to native code:/usr/lib/llvm-3.8/bin/llc "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/prec.llvm.bc" -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/prec.llvm.s" ... ok
+linking:gcc -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/prec.llvm.exec" "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/prec.llvm.s" "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decaf-stdlib.c" ... ok
+running:/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/prec.llvm.exec ... ok

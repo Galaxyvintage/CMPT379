@@ -1,0 +1,36 @@
+output prefix: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/expr-testfile-2
+llvmas: /usr/lib/llvm-3.8/bin/llvm-as
+llc: /usr/lib/llvm-3.8/bin/llc
+cc: gcc
+codegen: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decafexpr
+stdlib: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decaf-stdlib.c
+generating llvm code:/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decafexpr ... ok
+; ModuleID = 'Test'
+
+declare void @print_int(i32)
+
+define i32 @main() {
+entry:
+  %x = alloca i32
+  %y = alloca i1
+  %z = alloca i1
+  store i32 958, i32* %x
+  %0 = load i32, i32* %x
+  %unegtmp = sub i32 0, %0
+  store i32 %unegtmp, i32* %x
+  store i1 true, i1* %y
+  store i1 false, i1* %z
+  %1 = load i1, i1* %y
+  %andtmp = and i1 true, %1
+  %2 = load i1, i1* %z
+  %ortmp = or i1 %andtmp, %2
+  store i1 %ortmp, i1* %y
+  %3 = load i32, i32* %x
+  %unegtmp1 = sub i32 0, %3
+  call void @print_int(i32 %unegtmp1)
+  ret i32 0
+}
+assembling to bitcode:/usr/lib/llvm-3.8/bin/llvm-as "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/expr-testfile-2.llvm" -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/expr-testfile-2.llvm.bc" ... ok
+converting to native code:/usr/lib/llvm-3.8/bin/llc "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/expr-testfile-2.llvm.bc" -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/expr-testfile-2.llvm.s" ... ok
+linking:gcc -o "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/expr-testfile-2.llvm.exec" "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/expr-testfile-2.llvm.s" "/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/answer/decaf-stdlib.c" ... ok
+running:/home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/dev/llvm/expr-testfile-2.llvm.exec ... ok

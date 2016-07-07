@@ -1,0 +1,41 @@
+; ModuleID = 'Test'
+
+declare void @print_int(i32)
+
+define void @test3(i1) {
+entry:
+  %1 = load i1, i1* %a
+  %zexttmp = zext i1 %1 to i32
+  call void @print_int(i32 %zexttmp)
+  ret void
+  %a = alloca i1
+}
+
+define void @test2(i1) {
+entry:
+  %1 = load i1, i1* %a
+  %zexttmp = zext i1 %1 to i32
+  call void @print_int(i32 %zexttmp)
+  %2 = load i1, i1* %a
+  %unottmp = xor i1 %2, true
+  call void @test3(i1 %unottmp)
+  ret void
+  %a = alloca i1
+}
+
+define void @test1(i1) {
+entry:
+  %1 = load i1, i1* %a
+  %zexttmp = zext i1 %1 to i32
+  call void @print_int(i32 %zexttmp)
+  %2 = load i1, i1* %a
+  %unottmp = xor i1 %2, true
+  call void @test2(i1 %unottmp)
+  ret void
+}
+
+define i32 @main() {
+entry:
+  call void @test1(i1 true)
+  ret i32 0
+}

@@ -1,0 +1,3 @@
+/usr/lib/llvm-3.8/bin/llvm-as: /home/galaxyvintage/Documents/CMPT/CMPT379/CMPT379/hw3/decafexpr/output/test/llvm/2param.llvm:7:21: error: use of undefined value '%x'
+  store i32 1, i32* %x
+                    ^
