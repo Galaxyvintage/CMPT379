@@ -11,7 +11,6 @@ int yyerror(char *);
 // print AST?
 bool printAST = false;
 
-
 using namespace std;
 // this global variable contains all the generated code
 static llvm::Module *TheModule;
@@ -21,31 +20,6 @@ static llvm::IRBuilder<> Builder(llvm::getGlobalContext());
 // the calls to getGlobalContext() in the init above and in the
 // following code ensures that we are incrementally generating
 // instructions in the right order
-
-/*
-// dummy main function
-// should be replaced with actual codegen for the main method 
-// using the full Decaf grammar
-static llvm::Function *TheFunction = 0;
-
-// we have to create a main function 
-llvm::Function *gen_main_def() 
-{
-  // create the top-level definition for main
-  llvm::FunctionType *FT = llvm::FunctionType::get(llvm::IntegerType::get(llvm::getGlobalContext(), 32), false);
-  llvm::Function *TheFunction = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "main", TheModule);
-  if (TheFunction == 0)
-  {
-    throw runtime_error("empty function block"); 
-  }
-  // Create a new basic block which contains a sequence of LLVM instructions
-  llvm::BasicBlock *BB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "entry", TheFunction);
-  // All subsequent calls to IRBuilder will place instructions in this location
-  Builder.SetInsertPoint(BB);
-  return TheFunction;
-}
-*/
-
 
 
 #include "decafexpr.cc"
@@ -61,7 +35,7 @@ llvm::Function *gen_main_def()
 }
 
 %token T_FUNC
-%token T_PACKAGE
+x%token T_PACKAGE
 %token T_VAR
 %token T_INTTYPE 
 %token T_STRINGTYPE 
@@ -194,7 +168,7 @@ extern_def: T_EXTERN T_FUNC T_ID T_LPAREN extern_type_comma_list T_RPAREN method
 extern_type_comma_list: extern_type T_COMMA extern_type_comma_list
                       {
                         decafStmtList* slist = (decafStmtList*)$3;
-                        VarDefAST* e = new VarDefAST(string(""), *$1);
+                        VarDefAST* e = new VarDefAST(string(""), *$1, true);
                         slist->push_front(e);
                         $$ = slist;
                         delete $1;
@@ -202,7 +176,7 @@ extern_type_comma_list: extern_type T_COMMA extern_type_comma_list
                       | extern_type
                       {
                         decafStmtList* slist = new decafStmtList();
-                        VarDefAST* e = new VarDefAST(string(""),*$1);
+                        VarDefAST* e = new VarDefAST(string(""),*$1, true);
                         slist->push_front(e);
                         $$ = slist;
                         delete $1;     
@@ -210,7 +184,7 @@ extern_type_comma_list: extern_type T_COMMA extern_type_comma_list
                       | /* Empty */
                       {
                         decafStmtList* slist = new decafStmtList();
-                        VarDefAST* e = new VarDefAST(string(""), string(""));
+                        VarDefAST* e = new VarDefAST(string(""), string(""), true);
                         slist->push_front(e);
                         $$ = slist;
 		      }
@@ -350,7 +324,7 @@ method_decl: T_FUNC T_ID T_LPAREN param_list T_RPAREN method_type block
               decafStmtList* slist = new decafStmtList();
               decafStmtList* q;
 
-              string MethodType;
+              string MethodType; 
               MethodAST* e;
               MethodType = *$6;
               
@@ -360,11 +334,13 @@ method_decl: T_FUNC T_ID T_LPAREN param_list T_RPAREN method_type block
                                 (decafStmtList*)$4, 
                                 (BlockAST*)$7);
 
-              slist->push_back(e);
-               
+              //slist->push_back(e);
+              
+                
               delete $2;  // free T_ID
-              delete $6;  // free method_type
-              $$ = slist; 
+              delete $6;  // free method_type 
+              // $$ = slist;
+              $$ = (decafAST*)e;  
             } 
             ;
 param_list: /* Empty(zero or more) */
@@ -375,7 +351,7 @@ param_list: /* Empty(zero or more) */
 id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list
                   {
 		    VarDefAST* e;
-                    e = new VarDefAST(*$1,*$2);
+                    e = new VarDefAST(*$1,*$2, true);
                     ((decafStmtList*)$4)->push_front(e);
                     //print_descriptor(*$1); 
                     $$ = $4;
@@ -386,11 +362,10 @@ id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list
                   {
                     decafStmtList* slist = new decafStmtList();
                     VarDefAST* e;
-
-                    e = new VarDefAST(*$1, *$2);
+                    e = new VarDefAST(*$1, *$2, true);
                     slist->push_front(e);
 
-		    // print_descriptor(*$1);
+                    //print_descriptor(*$1);
 
                     delete $1; // free T_ID string 
                     delete $2; // free decaf_type string 
@@ -441,7 +416,7 @@ var_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
           
           for(int x = 0; x < $2->size(); ++x)
 	  {  
-            e = new VarDefAST((*$2)[x], *$3);
+            e = new VarDefAST((*$2)[x], *$3, false);
             slist->push_back(e);
 	  }
 
@@ -577,7 +552,8 @@ method_arg_comma_list: method_arg T_COMMA method_arg_comma_list
                ;
 method_arg: T_STRINGCONSTANT
           {
-            $$ = new ConstantAST("StringType",*$1);
+            string str = yysval_to_string(*$1); 
+            $$ = new ConstantAST("StringType",str);
             descriptor* d = access_symtbl(*$1);
             if(d != NULL)
               cerr<<"using decl on line number: "<< d->lineno <<endl;
@@ -708,7 +684,8 @@ value: T_ID T_LSB expr T_RSB
      {        
        descriptor* d = access_symtbl(*$1);
        if(d != NULL)
-         cerr<<"using decl on line number: "<< d->lineno <<endl; 
+         cout<<"using decl on line number: "<< d->lineno <<endl; 
+
        ValueAST* e = new ValueAST(*$1, (decafStmtList*) $3);
        delete $1;
        $$ = e;
@@ -717,7 +694,8 @@ value: T_ID T_LSB expr T_RSB
      { 
        descriptor* d = access_symtbl(*$1);
        if(d != NULL)
-         cerr<<"using decl on line number: "<< d->lineno <<endl;
+         cout<<"using decl on line number: "<< d->lineno <<endl;
+
        ValueAST* e = new ValueAST(*$1);
        delete $1;
        $$ = e;
@@ -777,8 +755,6 @@ extern_type: T_STRINGTYPE
            ;
 %%  
 
-
-
 /* 
    TODO: Need a way to keep track of all the pointers and free them 
          when the parser encounters a syntax error    
@@ -791,7 +767,6 @@ int main()
 
   // make the module, which holds all the code.
   TheModule = new llvm::Module("HW3", Context); 
-
 
   // set up symbol table
   symtbl.push_front(symbol_table());

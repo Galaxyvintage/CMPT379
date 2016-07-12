@@ -44,6 +44,7 @@ typedef struct descriptor
   llvm::AllocaInst* alloca_ptr;
   llvm::Function*     func_ptr;
   vector<llvm::Type*> arg_types;
+  vector<string>      arg_names;
 }descriptor; 
 
 typedef map<string, descriptor*> symbol_table;
