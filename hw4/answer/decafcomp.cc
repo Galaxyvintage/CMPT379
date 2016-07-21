@@ -27,7 +27,7 @@ void debug_print(bool flag, string output)
   if(flag == true) { cout<<output<<endl;}
 }
 
-descriptor* access_symtbl(string id)
+llvm::Value* access_symtbl(string id)
 {
   for(symbol_table_list::iterator i = symtbl.begin(); i != symtbl.end(); ++i)
   {
@@ -40,7 +40,7 @@ descriptor* access_symtbl(string id)
   return NULL;
 }
 
-descriptor* access_current_scope(string id)
+llvm::Value* access_current_scope(string id)
 {
   symbol_table i = symtbl.front();
   symbol_table::iterator find_id;
@@ -51,24 +51,7 @@ descriptor* access_current_scope(string id)
   return NULL;
 }
 
-void scope_check(string id)
-{
-  if(access_current_scope(id) != NULL)
-  {
-    //cerr<<"Warning: redefining previously defined identifier: "<< id <<endl;
-  }
-}
-
-void print_descriptor(string id)
-{
-  descriptor* d = access_symtbl(id);
-  if(d == NULL){ cout<<"not found in symtbl"<<endl; return ;}
-  cerr<<"defined variable: "<< id
-      <<", with type: "     << d->type
-      <<", on line number: "<< d->lineno <<endl;
-} 
-
-void free_descriptors(symbol_table table)
+void free_element(symbol_table table)
 {
   for(symbol_table::iterator i = table.begin(); i != table.end(); ++i)
   {
@@ -105,20 +88,6 @@ llvm::Type* getType(string type)
   { LType = Builder.getInt8PtrTy();} // ptr to array of bytes
   return LType;
 }
-/*
-string  getType(llvm::Type* type)
-{
-  string ret;
-  if(type.isIntegerTy(32))         
-  { ret = "IntType";  } // 32 bit int
-  else if(type.isIntegerTy(1))  
-  { ret = = "BoolType"; } // 1 bit int  
-  else if(type.isVoidTy())  
-  { ret = "VoidType";   } // void 
-  else if(type == "StringType") 
-  { LType = Builder.getInt8PtrTy();} // ptr to array of bytes
-}
-*/
 
 int getOperator(string op)
 {
@@ -369,11 +338,11 @@ public:
   {
     return Name;
   }
+
   llvm::Value *Codegen() 
   {
     debug_print(debug_flag,"...VarDef Codegen Begins...");
-    scope_check(Name);
-    //cout<<"Var Name: "<<Name<<endl;
+
     if(Name.empty()) { return NULL; }
 
     llvm::Type  *LType = getType(VarType);
@@ -382,14 +351,9 @@ public:
     if(isParam == false)
     { 
       Alloca = Builder.CreateAlloca(LType, NULL, Name);
-      descriptor* d = new descriptor;
-      d->type = VarType;
-      d->lineno = lineno;
-      d->alloca_ptr = Alloca;
-      (symtbl.front())[Name] = d;
+      (symtbl.front())[Name] = Alloca;
     } 
 
-    ///llvm::AllocaInst* Alloca = CreateEntryBlockAlloca(func, LType, Name);
     debug_print(debug_flag,"...VarDef Codegen Ends...");
     return (llvm::Value*)Alloca;
   }
@@ -403,11 +367,7 @@ class ConstantAST : public decafAST
 public:
   ConstantAST(string type, string value) : Type(type), Value(value)
   {
-    descriptor* d = access_current_scope(value);
-    if(d != NULL)
-    {
-      //cout<<" // using decl on line: "<<d->lineno;
-    }   
+   
   } 
   
   string str()
@@ -472,8 +432,6 @@ public:
   {
     debug_print(debug_flag,"...Extern Codegen Begins...");
 
-    scope_check(Name);
-
     llvm::Value *val = NULL;
 
     llvm::Type* returnTy = getType(MethodType);
@@ -505,14 +463,10 @@ public:
                                                   Name,
                                                   TheModule
  	 					 );
+   
     verifyFunction(*func);
     val = (llvm::Value*)func;
-    descriptor* d = new descriptor;
-    d->type       = MethodType;
-    d->lineno     = lineno;
-    d->func_ptr   = func;
-    d->arg_types  = args;
-    (symtbl.front())[Name] = d; 
+    (symtbl.front())[Name] = val; 
     debug_print(debug_flag,"...Extern Codegen Ends...");
     return val; 
   }
@@ -559,40 +513,34 @@ public:
     debug_print(debug_flag, "...Block Codegen Begins...");
 
     symtbl.push_front(symbol_table());
-
-    llvm::BasicBlock* CurBB = Builder.GetInsertBlock();
-    llvm::Function* func    = CurBB->getParent();
-    llvm::StringRef func_name = func->getName();
     
-
-    if(func != NULL)
+    // if it's a method block
+    if(MethodBlock)
     {
-      descriptor *d, *e;
-      vector<llvm::Type *> arg_types;
-      vector<string>arg_names;
+      llvm::BasicBlock* CurBB   = Builder.GetInsertBlock();
+      llvm::Function* func      = CurBB->getParent();
+      llvm::StringRef func_name = func->getName();
       llvm::AllocaInst* Alloca;
 
-      d = access_symtbl(func_name);
-      arg_types = d->arg_types;
-      arg_names = d->arg_names;
-
-      unsigned int idx = 0; 
-     
-      for(llvm::Function::arg_iterator i = func->arg_begin(); i != func->arg_end(); ++i, ++idx)
+      unsigned int Idx = 0; 
+      string arg_name;
+      
+      for(llvm::Function::arg_iterator i = func->arg_begin(); i != func->arg_end(); ++i)
       {
-        Alloca = CreateEntryBlockAlloca(func, arg_types[idx], arg_names[idx]);    
+        arg_name = (*i).getName(); 
+        cout<<arg_name<<endl;
+
+        Alloca = Builder.CreateAlloca((*i).getType() , NULL, (*i).getName());    
         Builder.CreateStore(&(*i), Alloca);  
-        e = new descriptor;
-        e->alloca_ptr = Alloca;
-        e->type   = "IntType"; // need change
-        (symtbl.front())[arg_names[idx]] = e;
+        (symtbl.front())[arg_name] = (llvm::Value*)Alloca;
       }
     }
+
     if(VarDeclList != NULL) { VarDeclList->Codegen(); }
     if(StmtList    != NULL) { StmtList->Codegen();    } 
     
     symbol_table sym_table = symtbl.front();
-    free_descriptors(sym_table);
+    //free_element(sym_table);
     symtbl.pop_front(); 
 
     debug_print(debug_flag, "...Block Codegen Ends...");
@@ -635,8 +583,6 @@ public:
     //cout<<"func name:"<<Name<<endl;
     llvm::Function *func;
     llvm::Type *returnTy;
-    vector<llvm::Type *> arg_types;
-    vector<string>arg_names;
     list<decafAST*> stmts;
 
     returnTy = getType(MethodType);
@@ -647,14 +593,19 @@ public:
       stmts = ArgList->return_list(); 
       ArgList->Codegen();
     }
-
+   
+    vector<llvm::Type *> arg_types;
+    vector<string>arg_names;
+    llvm::Type* arg_type;
+    string arg_name;    
+    VarDefAST* e;
     for (list<decafAST*>::iterator i = stmts.begin(); i != stmts.end(); i++)
     {  
-      VarDefAST* e        = (VarDefAST*)(*i);
-      llvm::Type* ArgType = getType(e->getVarType());
-      string ArgName      = e->getName(); 
-      arg_types.push_back(ArgType);  
-      arg_names.push_back(ArgName);  
+      e = (VarDefAST*)(*i);
+      arg_type = getType(e->getVarType());
+      arg_name = e->getName(); 
+      arg_types.push_back(arg_type);  
+      arg_names.push_back(arg_name);  
     }   
 
     func = llvm::Function::Create(llvm::FunctionType::get(returnTy, arg_types, false),
@@ -670,27 +621,17 @@ public:
     }
 
     // assuming the no function duplicates....
-    descriptor* d = new descriptor;
-    d->type       = MethodType;
-    d->lineno     = lineno;
-    d->func_ptr   = func;
-    d->arg_types  = arg_types;
-    d->arg_names  = arg_names; 
-    (symtbl.front())[Name] = d;
+    (symtbl.front())[Name] = (llvm::Value*) func;
 
     return func;
   }
-
 
   llvm::Value *Codegen()
   {
     debug_print(debug_flag,"...Method Codegen Begins...");
 
-    descriptor* d        = access_symtbl(Name);
-    llvm::Function *func = d->func_ptr;
+    llvm::Function *func = (llvm::Function*)access_symtbl(Name);
     llvm::Type *returnTy = getType(MethodType);
-    vector<llvm::Type*> arg_types = d->arg_types;
-    vector<string>      arg_names = d->arg_names;
 
     // create default return 
     if(returnTy->isIntegerTy(32)) 
@@ -713,7 +654,6 @@ public:
        
     // all subsequent calls to IRBuilder wlil place instructions in this location 
     Builder.SetInsertPoint(BB);
-
     
     if(Block != NULL) 
     {
@@ -880,10 +820,9 @@ public:
       else if(GVType->isVoidTy())     { Initializer = NULL; }
     }
     
-    scope_check(Name);   
-    llvm::GlobalVariable *GV;
-    descriptor* d = new descriptor;
 
+    llvm::GlobalVariable *GV;
+ 
     // only non-array variable can be assigned in this grammar
     if( Assignment || FieldSize == "Scalar" )
     {
@@ -906,15 +845,11 @@ public:
                                     llvm::GlobalValue::ExternalLinkage, 
                                     zeroInit, 
                                     Name);
-      d->array_type = arrayi32;
     }
 
   
-    d->type  = FieldType;
-    d->lineno = lineno;
     if(GV == NULL) { cout<<"GV "<<Name<<" is NULL "<<endl;}
-    d->gv_ptr = GV; 
-    (symtbl.front())[Name] = d;
+    (symtbl.front())[Name] = (llvm::Value*) GV;
     //cout<<"Storing name in symtbl: "<<Name<<endl;
 
     debug_print(debug_flag, "...FieldDecl Codegen Ends...");
@@ -947,8 +882,7 @@ public:
     debug_print(debug_flag, "...MethodCall Codegen Begins...");
 
     llvm::Value* val = NULL;
-
-    descriptor* d = access_symtbl(Name);
+    llvm::Function* func = (llvm::Function*)access_symtbl(Name);
     list<decafAST*> stmts;
     vector<llvm::Value*> arg_values;
     vector<llvm::Type*> arg_types;
@@ -960,22 +894,16 @@ public:
       stmts = ArgList->return_list();
     }
     
-    if(d != NULL) 
+    if(func != NULL) 
     {
-      llvm::Function::arg_iterator args; 
-      vector<string> arg_names;
-  
-      call      = d->func_ptr; 
-      args      = call->arg_begin();
-      arg_types = d->arg_types;
-      arg_names = d->arg_names;
-         
-      unsigned int idx = 0;
-
-      for (list<decafAST*>::iterator i = stmts.begin(); i != stmts.end(); i++)
+      llvm::Function::arg_iterator args;   
+      call = func; 
+   
+      for (list<decafAST*>::iterator i = stmts.begin(); i != stmts.end(); i++, args++)
       {         
+        args = call->arg_begin();
  	llvm::Value* arg_value = (*i)->Codegen();  
-	llvm::Type*  arg_type  = arg_types[idx];
+	llvm::Type*  arg_type  = (*args).getType();
         
         if(arg_value->getType()->isIntegerTy(1) && arg_type->isIntegerTy(32))
 	{
@@ -983,9 +911,7 @@ public:
 	}
         
         arg_values.push_back(arg_value);    
-        idx++;
       }   
-
     }
 
     isVoid    = call->getReturnType()->isVoidTy();
@@ -1009,7 +935,7 @@ public:
     if(IndexExpr != NULL) { delete IndexExpr; }
   }
    
-  string getID() { return Name; }  
+  string getName() { return Name; }  
   decafStmtList* getIndexExpr() { return IndexExpr; }
   bool isArray() { return ArrayFlag; }	
 	   
@@ -1027,39 +953,24 @@ public:
   llvm::Value *Codegen() 
   {
     debug_print(debug_flag,"...Value Codegen Begins...");
-    // TODO:  1. handle error when d is null 
-    //        2. handle error when it is array_type (not needed for HW3)
-    //        3. check global variable
-    llvm::Value* val;
     
     //cout<<"Accessing name in symtbl: "<<Name<<endl;
-    descriptor* d  = access_symtbl(Name);
-    
-    if(d == NULL){ cout<<"Value discriptor IS NULL"<<endl;}
+    llvm::Value* val = access_symtbl(Name);
 
     if(ArrayFlag == false)
     {
-      //cout<<"check"<<endl;
-      if(d->alloca_ptr != NULL)
-      {
-        //cout<<"alloca"<<endl;
-        val = Builder.CreateLoad(d->alloca_ptr);         
-      }
-      else
-      {
-        //cout<<"gv"<<endl;
-        if(d->gv_ptr == NULL){ cout<<"gv is NULL"<<endl; }
-        val = Builder.CreateLoad(d->gv_ptr, "gvtmp");
+      if(val != NULL)
+      { 
+        val = Builder.CreateLoad(val,Name);         
       }
     }
     else
     { 
-      llvm::GlobalVariable * GV = d->gv_ptr;
-      llvm::ArrayType *arrayi32 = d->array_type;
+      llvm::GlobalVariable * GV = (llvm::GlobalVariable*)val;
+      llvm::ArrayType *arrayi32 = (llvm::ArrayType*)GV->getType();
       llvm::Value     *ArrayLoc = Builder.CreateStructGEP(arrayi32, GV, 0, "arrayloc");
       llvm::Value     *Index    = IndexExpr->Codegen() ;
-      llvm::Value   *ArrayIndex = Builder.CreateGEP(getType(d->type), ArrayLoc, Index, "arrayindex");
-      d->array_index = ArrayIndex;
+      llvm::Value   *ArrayIndex = Builder.CreateGEP(arrayi32->getElementType(), ArrayLoc, Index, "arrayindex");
       val = Builder.CreateLoad(ArrayIndex, "loadtmp");
     }
     debug_print(debug_flag,"...Value Codegen Ends...");
@@ -1075,11 +986,7 @@ class AssignAST : public decafAST
 public: 
   AssignAST(ValueAST* value, decafAST* expr) : Value(value), Expr(expr)
   {
-    descriptor* d = access_symtbl(Value->getID());
-    if(d != NULL)
-    {
-      //cout<<" // using decl on line: "<<d->lineno;
-    } 
+
   }
   ~AssignAST()
   {
@@ -1093,63 +1000,48 @@ public:
     if(!(Value->isArray()))
     {
       Name = string("AssignVar");
-      return Name + "(" + Value->getID() + "," + getString(Expr) + ")";
+      return Name + "(" + Value->getName() + "," + getString(Expr) + ")";
     }
     else
     {
       Name = string("AssignArrayLoc");
-      return Name + "(" + Value->getID() + "," + getString(Value->getIndexExpr()) + ","+ getString(Expr) + ")";
+      return Name + "(" + Value->getName() + "," + getString(Value->getIndexExpr()) + ","+ getString(Expr) + ")";
     } 
   }
   llvm::Value *Codegen() 
   {
     debug_print(debug_flag,"...Assign Codegen Begins...");
     llvm::Value *val = NULL; 
-    llvm::AllocaInst *Alloca;
-    llvm::GlobalVariable *GV;
-    llvm::Value *ArrayIndex;
+    llvm::Value *LValue;
     llvm::Value *RValue;
-    descriptor* d;
-       
-    d = access_symtbl(Value->getID());
-    RValue = Expr->Codegen();  
 
+    LValue = access_symtbl(Value->getName());    
     if(Value->isArray())
-    {
-      GV = d->gv_ptr;
-      ArrayIndex = d->array_index;
-
-      if((ArrayIndex->getType()->isIntegerTy(32) == true) &&
-         (RValue->getType()->isIntegerTy(1)  == true))
-      {  
-        RValue = Builder.CreateZExt(RValue, Builder.getInt32Ty(), "zexttmp");    
-      }
-
-      const llvm::PointerType *ptrTy = RValue->getType()->getPointerTo();
-    
-      if(ArrayIndex->getType() == ptrTy)
-      {
-        val = Builder.CreateStore(RValue, ArrayIndex);
-      }              
-    }    
-    else
-    {
-      Alloca = d->alloca_ptr;
-
-      if((Alloca->getType()->isIntegerTy(32) == true) &&
-         (RValue->getType()->isIntegerTy(1)  == true))
-      {  
-        RValue = Builder.CreateZExt(RValue, Builder.getInt32Ty(), "zexttmp");    
-      }
-
-      const llvm::PointerType *ptrTy = RValue->getType()->getPointerTo();
-    
-      if(Alloca->getType() == ptrTy)
-      {
-        val = Builder.CreateStore(RValue, Alloca);
-      }  
+    {   
+      llvm::GlobalVariable * GV = (llvm::GlobalVariable*)LValue;
+      llvm::ArrayType *arrayi32 = (llvm::ArrayType*)GV->getType();
+      llvm::Value     *ArrayLoc = Builder.CreateStructGEP(arrayi32, GV, 0, "arrayloc");
+      llvm::Value     *Index    = (Value->getIndexExpr())->Codegen() ;
+      llvm::Value   *ArrayIndex = Builder.CreateGEP(arrayi32->getElementType(), ArrayLoc, Index, "arrayindex");
+      LValue = ArrayIndex;
     }
 
+    RValue = Expr->Codegen();  
+
+    if((LValue->getType()->isIntegerTy(32) == true) &&
+       (RValue->getType()->isIntegerTy(1)  == true))
+    {  
+      RValue = Builder.CreateZExt(RValue, Builder.getInt32Ty(), "zexttmp");    
+    }
+
+    const llvm::PointerType *ptrTy = RValue->getType()->getPointerTo();
+    
+    if(LValue->getType() == ptrTy)
+    {
+      // not clear whether RValue is the address or the actually value stored 
+      val = Builder.CreateStore(RValue, LValue);
+    }              
+    
     debug_print(debug_flag,"...Assign Codegen Ends...");
     return val;
   }
@@ -1174,7 +1066,7 @@ public:
   string str()
   {
     return string("IfStmt") + "(" + getString(Condition) + "," + getString(IfBlock) + "," + getString(ElseBlock) + ")";
-  }
+   }
   llvm::Value *Codegen() 
   { 
 

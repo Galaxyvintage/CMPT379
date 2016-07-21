@@ -36,20 +36,7 @@ typedef struct
   std::string* size;
 }array_info;
 
-typedef struct descriptor 
-{ 
-  int lineno;
-  string type;
-  llvm::GlobalVariable* gv_ptr;
-  llvm::ArrayType*      array_type;
-  llvm::Value*          array_index;
-  llvm::AllocaInst*     alloca_ptr;
-  llvm::Function*       func_ptr;
-  vector<llvm::Type*>   arg_types;
-  vector<string>        arg_names;
-}descriptor; 
-
-typedef map<string, descriptor*> symbol_table;
+typedef map<string, llvm::Value*> symbol_table;
 
 typedef list<symbol_table> symbol_table_list;
 
@@ -59,10 +46,7 @@ extern int tokenpos;
 
 extern symbol_table_list symtbl;
 
-extern descriptor* access_symtbl(string id);
-
-extern void print_descriptor(string id);
-
+extern llvm::Value* access_symtbl(string id);
 
 #endif
 

@@ -226,11 +226,7 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
                 e = new FieldAST((*$2)[x],*$3,"Scalar", false);
                 slist->push_back(e);
               }    
-  
-              for(int x = $2->size() - 1; x >= 0; --x)
-              {
-                //print_descriptor((*$2)[x]);
-              }  
+   
               delete $2;
               delete $3;
 
@@ -273,7 +269,6 @@ field_decl: T_VAR id_comma_list decaf_type T_SEMICOLON
              
               e = new FieldAST((*$2)[0],*$3,$5,true);
               slist->push_back(e);
-              //print_descriptor((*$2)[0]);
                    
               delete $2;
               delete $3;
@@ -353,7 +348,7 @@ id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list
 		    VarDefAST* e;
                     e = new VarDefAST(*$1,*$2, true);
                     ((decafStmtList*)$4)->push_front(e);
-                    //print_descriptor(*$1); 
+ 
                     $$ = $4;
                     delete $1;
                     delete $2;
@@ -365,7 +360,7 @@ id_type_comma_list: T_ID decaf_type T_COMMA id_type_comma_list
                     e = new VarDefAST(*$1, *$2, true);
                     slist->push_front(e);
 
-                    //print_descriptor(*$1);
+
 
                     delete $1; // free T_ID string 
                     delete $2; // free decaf_type string 
@@ -388,7 +383,7 @@ begin_block : T_LCB
 end_block   : T_RCB
             {
               symbol_table sym_table = symtbl.front();
-              free_descriptors(sym_table);
+              free_element(sym_table);
               symtbl.pop_front();          
             };
 
@@ -553,11 +548,7 @@ method_arg_comma_list: method_arg T_COMMA method_arg_comma_list
 method_arg: T_STRINGCONSTANT
           {
             string str = yysval_to_string(*$1); 
-            $$ = new ConstantAST("StringType",str);
-            descriptor* d = access_symtbl(*$1);
-            if(d != NULL)
-              cerr<<"using decl on line number: "<< d->lineno <<endl;
-            
+            $$ = new ConstantAST("StringType",str);           
             delete $1;
           }
           | expr
@@ -682,20 +673,12 @@ expr: value
     ;
 value: T_ID T_LSB expr T_RSB
      {        
-       descriptor* d = access_symtbl(*$1);
-       if(d != NULL)
-         cout<<"using decl on line number: "<< d->lineno <<endl; 
-
        ValueAST* e = new ValueAST(*$1, (decafStmtList*) $3);
        delete $1;
        $$ = e;
      }
      | T_ID 
      { 
-       descriptor* d = access_symtbl(*$1);
-       if(d != NULL)
-         cout<<"using decl on line number: "<< d->lineno <<endl;
-
        ValueAST* e = new ValueAST(*$1);
        delete $1;
        $$ = e;
@@ -709,9 +692,6 @@ constant: T_INTCONSTANT
         } 
         | T_CHARCONSTANT
         { 
-          descriptor* d = access_symtbl(*$1);
-          if(d != NULL)
-            cerr<<"using decl on line number: "<< d->lineno <<endl;
           $$ = new ConstantAST(string("IntType"), char_to_ascii_string(*$1));
           delete $1;
 	}
@@ -776,7 +756,7 @@ int main()
 
   // free the extern scope symtol table
   symbol_table sym_table = symtbl.front();
-  free_descriptors(sym_table);
+  //free_element(sym_table);
   symtbl.pop_front();    
 
   // Print out all of the generated code to stderr
