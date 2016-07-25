@@ -13,8 +13,11 @@
 
 using namespace std;
 
-// empty list of symbol tables 
+// empty list of symbol tables
 symbol_table_list symtbl;
+
+// empty list of symbol tables for branching locations
+symbol_table_list symtbl_br;
 
 // debug_flag
 bool debug_flag = false;
@@ -528,7 +531,7 @@ public:
       for(llvm::Function::arg_iterator i = func->arg_begin(); i != func->arg_end(); ++i)
       {
         arg_name = (*i).getName(); 
-        cout<<arg_name<<endl;
+        //cout<<arg_name<<endl;
 
         Alloca = Builder.CreateAlloca((*i).getType() , NULL, (*i).getName());    
         Builder.CreateStore(&(*i), Alloca);  
@@ -568,7 +571,6 @@ public:
   {
     return Name;
   }
-
 
   string str()
   {
@@ -620,7 +622,7 @@ public:
       Arg.setName(arg_names[Idx++]);
     }
 
-    // assuming the no function duplicates....
+    // assuming there are no function duplicates....
     (symtbl.front())[Name] = (llvm::Value*) func;
 
     return func;
@@ -632,12 +634,6 @@ public:
 
     llvm::Function *func = (llvm::Function*)access_symtbl(Name);
     llvm::Type *returnTy = getType(MethodType);
-
-    // create default return 
-    if(returnTy->isIntegerTy(32)) 
-    { returnValue = Builder.getInt32(0); }
-    else //if(returnTy->isIntegerTy(1))  
-    { returnValue = Builder.getInt1(1) ; } 
 
     list<decafAST*> stmts;
  
@@ -659,16 +655,25 @@ public:
     {
       Block->Codegen(); 
     }
-    
-    if(returnTy->isVoidTy())
-    { 
-      Builder.CreateRet(NULL);
-    }
-    else
+
+    if(returnValue == NULL)    
     {
-      Builder.CreateRet(returnValue);
+      if(returnTy->isVoidTy())
+      { 
+        Builder.CreateRet(NULL);
+      }
+      else
+      {
+        // create default return 
+        if(returnTy->isIntegerTy(32)) 
+        { returnValue = Builder.getInt32(0); }
+        else //if(returnTy->isIntegerTy(1))  
+        { returnValue = Builder.getInt1(1) ; } 
+        Builder.CreateRet(returnValue);
+        returnValue = NULL;
+      }
     }
-    
+
     verifyFunction(*func);
   
     debug_print(debug_flag,"...Method Codegen Ends..."); 
@@ -1065,13 +1070,49 @@ public:
 
   string str()
   {
-    return string("IfStmt") + "(" + getString(Condition) + "," + getString(IfBlock) + "," + getString(ElseBlock) + ")";
+    return string("IfStmt")     + "(" +
+           getString(Condition) + "," +
+           getString(IfBlock)   + "," + 
+           getString(ElseBlock) + ")";
    }
   llvm::Value *Codegen() 
-  { 
+  {
+    llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
+    llvm::Function *func    = CurBB->getParent();
+  
+    llvm::BasicBlock* IfStartBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "ifstart", func);
+    llvm::BasicBlock* IfTrueBB  = llvm::BasicBlock::Create(llvm::getGlobalContext(), "iftrue",  func);
+    llvm::BasicBlock* IfFalseBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "iffalse", func);
+    llvm::BasicBlock* EndBB     = llvm::BasicBlock::Create(llvm::getGlobalContext(), "end", func);     
 
+    (symtbl.front())["ifstart"] = IfStartBB;
+    (symtbl.front())["iftrue"]  = IfTrueBB; 
+    (symtbl.front())["iffalse"] = IfFalseBB;
+    (symtbl.front())["end"]     = EndBB;
 
+    Builder.CreateBr(IfStartBB);
 
+    // check if condition is true or false
+    // if true:   Create branch to IfTrueBB
+    // if false:  Create branch to EndBB
+
+    Builder.SetInsertPoint(IfStartBB);
+    llvm::Value* Cond = Condition->Codegen();   
+    
+    Builder.CreateCondBr(Cond, IfTrueBB, IfFalseBB);
+
+    // Insert instruction to IfTrueBB
+    Builder.SetInsertPoint(IfTrueBB);
+    IfBlock->Codegen();
+    Builder.CreateBr(EndBB);
+
+    // Insert instruction to IfFalseBB 
+    Builder.SetInsertPoint(IfFalseBB);
+    ElseBlock->Codegen();
+    Builder.CreateBr(EndBB);
+ 
+    // Insert instruction to EndBB(from MethodAST)
+    Builder.SetInsertPoint(EndBB);         
     return NULL; 
   }
 };
@@ -1141,17 +1182,21 @@ public:
   }
   llvm::Value *Codegen() 
   {
+    
     llvm::Value* val;
+    /*
     llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
     llvm::Function *func    = CurBB->getParent();
     llvm::Type* returnTy    = func->getReturnType();
-   
+    */
+
     if(Expr != NULL)
     { 
       val = Expr->Codegen();
       returnValue = val;
+      Builder.CreateRet(returnValue);
+      returnValue = NULL;
     }
-
     return val;
   }
 };
