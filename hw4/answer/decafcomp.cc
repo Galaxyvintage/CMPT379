@@ -1246,11 +1246,65 @@ public:
     debug_print(debug_flag, "...BinaryOp Codegen Begins..."); 
 
     llvm::Value* val = nullptr;
-    llvm::Value* LValue = LeftValue->Codegen();
-    llvm::Value* RValue = RightValue->Codegen();
-
+    llvm::Value* LValue;
+    llvm::Value* RValue;
+    llvm::PHINode* phi;
+    int CurOp = getOperator(BinaryOp);
+    if((CurOp != T_AND) && (CurOp != T_OR))
+    {
+      LValue = LeftValue->Codegen();
+      RValue = RightValue->Codegen();
+    }
+    
+    // control flow basic blocks for boolean short circuiting 
+    llvm::BasicBlock *CurBB   = Builder.GetInsertBlock();
+    llvm::Function *func      = CurBB->getParent(); 
+    //llvm::BasicBlock* LBB     = llvm::BasicBlock::Create(llvm::getGlobalContext(), "lval", func);  
+    llvm::BasicBlock* RBB     = llvm::BasicBlock::Create(llvm::getGlobalContext(), "rval", func); 
+    llvm::BasicBlock* MergeBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "merge", func); 
     switch(getOperator(BinaryOp))
-    {   
+    {  
+      case T_AND: 
+      {
+        //Builder.CreateBr(LBB);
+        //Builder.SetInsertPoint(LBB);
+        LValue = LeftValue->Codegen();
+        Builder.CreateCondBr(LValue, RBB, MergeBB);
+
+        Builder.SetInsertPoint(RBB);
+        RValue = RightValue->Codegen();
+        RBB    = Builder.GetInsertBlock(); // update the current block 
+        Builder.CreateBr(MergeBB);        
+ 
+        Builder.SetInsertPoint(MergeBB);                     
+ 	phi = Builder.CreatePHI(LValue->getType(), 2, "phival"); 
+        phi->addIncoming(LValue, CurBB);
+        phi->addIncoming(RValue, RBB);
+  
+        val = (llvm::Value*)phi;
+        break;
+      }
+      case T_OR:
+      {
+        //Builder.CreateBr(LBB);
+        //Builder.SetInsertPoint(LBB);
+        LValue = LeftValue->Codegen();
+        Builder.CreateCondBr(LValue, MergeBB, RBB);
+
+        Builder.SetInsertPoint(RBB);
+        RValue = RightValue->Codegen();
+        RBB    = Builder.GetInsertBlock(); // update the current block 
+        Builder.CreateBr(MergeBB);        
+         
+        Builder.SetInsertPoint(MergeBB);                     
+ 	phi = Builder.CreatePHI(LValue->getType(), 2, "phival"); 
+        phi->addIncoming(LValue, CurBB);
+        phi->addIncoming(RValue, RBB);
+        
+        val = (llvm::Value*)phi;
+        break;
+      }
+ 
       case T_PLUS: 
       {  
         val = Builder.CreateAdd(LValue,RValue,"addtmp");
@@ -1314,16 +1368,6 @@ public:
       case T_GEQ:
       {
         val = Builder.CreateICmpSGE(LValue, RValue,"geqtmp");
-        break;
-      }
-      case T_AND: 
-      {  
-        val = Builder.CreateAnd(LValue,RValue,"andtmp");
-        break;
-      }
-      case T_OR:
-      {
-        val = Builder.CreateOr(LValue, RValue,"ortmp");
         break;
       }
       default: break;
