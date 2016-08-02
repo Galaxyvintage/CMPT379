@@ -16,9 +16,6 @@ using namespace std;
 // empty list of symbol tables
 symbol_table_list symtbl;
 
-// empty list of symbol tables for branching locations
-symbol_table_list symtbl_br;
-
 // debug_flag
 bool debug_flag = false;
 
@@ -1080,15 +1077,15 @@ public:
     llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
     llvm::Function *func    = CurBB->getParent();
   
-    llvm::BasicBlock* IfStartBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "ifstart", func);
-    llvm::BasicBlock* IfTrueBB  = llvm::BasicBlock::Create(llvm::getGlobalContext(), "iftrue",  func);
-    llvm::BasicBlock* IfFalseBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "iffalse", func);
-    llvm::BasicBlock* EndBB     = llvm::BasicBlock::Create(llvm::getGlobalContext(), "end", func);     
+    llvm::BasicBlock* IfStartBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_ifstart", func);
+    llvm::BasicBlock* IfTrueBB  = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_iftrue",  func);
+    llvm::BasicBlock* IfFalseBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_iffalse", func);
+    llvm::BasicBlock* IfEndBB   = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_ifend", func);     
 
-    (symtbl.front())["ifstart"] = IfStartBB;
-    (symtbl.front())["iftrue"]  = IfTrueBB; 
-    (symtbl.front())["iffalse"] = IfFalseBB;
-    (symtbl.front())["end"]     = EndBB;
+    (symtbl.front())["0_ifstart"] = IfStartBB;
+    (symtbl.front())["0_iftrue"]  = IfTrueBB; 
+    (symtbl.front())["0_iffalse"] = IfFalseBB;
+    (symtbl.front())["0_ifend"]   = IfEndBB;
 
     Builder.CreateBr(IfStartBB);
 
@@ -1104,15 +1101,20 @@ public:
     // Insert instruction to IfTrueBB
     Builder.SetInsertPoint(IfTrueBB);
     IfBlock->Codegen();
-    Builder.CreateBr(EndBB);
+    Builder.CreateBr(IfEndBB);
 
     // Insert instruction to IfFalseBB 
     Builder.SetInsertPoint(IfFalseBB);
-    ElseBlock->Codegen();
-    Builder.CreateBr(EndBB);
+
+    if(ElseBlock != NULL)
+    {
+      ElseBlock->Codegen();
+    }
+
+    Builder.CreateBr(IfEndBB);
  
-    // Insert instruction to EndBB(from MethodAST)
-    Builder.SetInsertPoint(EndBB);         
+    // Insert instruction to IfEndBB(from MethodAST)
+    Builder.SetInsertPoint(IfEndBB);         
     return NULL; 
   }
 };
@@ -1134,24 +1136,57 @@ public:
   { 
     return string("WhileStmt") + "(" + getString(Condition) + "," + getString(WhileBlock) + ")";
   }
-  llvm::Value *Codegen() { return NULL; }
+  llvm::Value *Codegen()
+  { 
+    llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
+    llvm::Function *func    = CurBB->getParent();
+  
+    llvm::BasicBlock* WhileStartBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_whilestart", func);
+    llvm::BasicBlock* WhileTrueBB  = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_whiletrue",  func);
+    llvm::BasicBlock* WhileEndBB   = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_whileend", func);     
+
+    (symtbl.front())["0_loopstart"] = WhileStartBB;
+    (symtbl.front())["0_looptrue"]  = WhileTrueBB; 
+    (symtbl.front())["0_loopend"]   = WhileEndBB;
+       
+    Builder.CreateBr(WhileStartBB);
+    
+    Builder.SetInsertPoint(WhileStartBB);
+    llvm::Value* Cond = Condition->Codegen(); 
+
+    Builder.CreateCondBr(Cond, WhileTrueBB, WhileEndBB);
+    
+    Builder.SetInsertPoint(WhileTrueBB);
+    WhileBlock->Codegen(); 
+    Builder.CreateBr(WhileStartBB);   
+
+    // Insert instruction to WhileEndBB
+    Builder.SetInsertPoint(WhileEndBB);
+   
+    (symtbl.front()).erase("0_loopstart");
+    (symtbl.front()).erase("0_looptrue") ;
+    (symtbl.front()).erase("0_loopend");
+   
+
+    return NULL; 
+  }
 };
 
 class ForStmtAST : public decafAST
 {
   AssignAST* PreAssign;
   decafAST*  Condition;
-  AssignAST* LoopAssign;
+  AssignAST* PostAssign;
   BlockAST*  ForBlock;
     
 public:
-  ForStmtAST(AssignAST* pre_assign, decafAST* condition, AssignAST* loop_assign, BlockAST* for_block)
-           : PreAssign(pre_assign), Condition(condition), LoopAssign(loop_assign), ForBlock(for_block){}  
+  ForStmtAST(AssignAST* pre_assign, decafAST* condition, AssignAST* post_assign, BlockAST* for_block)
+           : PreAssign(pre_assign), Condition(condition), PostAssign(post_assign), ForBlock(for_block){}  
   ~ForStmtAST()
   {
     if(PreAssign  != NULL) { delete PreAssign;  }
     if(Condition  != NULL) { delete Condition;  }
-    if(LoopAssign != NULL) { delete LoopAssign; }
+    if(PostAssign != NULL) { delete PostAssign; }
     if(ForBlock   != NULL) { delete ForBlock;   }
   }
 
@@ -1159,10 +1194,50 @@ public:
   { 
     return string("ForStmt") + "(" + getString(PreAssign)  + "," 
                                    + getString(Condition)  + "," 
-                                   + getString(LoopAssign) + "," 
+                                   + getString(PostAssign) + "," 
                                    + getString(ForBlock)   +  ")";
   }   
-  llvm::Value *Codegen() {}
+  llvm::Value *Codegen() 
+  {
+    llvm::BasicBlock *CurBB = Builder.GetInsertBlock();
+    llvm::Function *func     = CurBB->getParent();
+    
+    llvm::BasicBlock* ForStartBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_forstart", func);
+    llvm::BasicBlock* ForTrueBB  = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_fortrue",  func);
+    llvm::BasicBlock* ForPostBB  = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_forpost",  func);
+    llvm::BasicBlock* ForEndBB   = llvm::BasicBlock::Create(llvm::getGlobalContext(), "0_forend",   func);     
+
+    (symtbl.front())["0_loopstart"]  = ForStartBB;
+    (symtbl.front())["0_looptrue"]   = ForTrueBB; 
+    (symtbl.front())["0_loopassign"] = ForPostBB;
+    (symtbl.front())["0_loopend"]    = ForEndBB;
+
+    PreAssign->Codegen();
+    
+    // Condition check
+    Builder.CreateBr(ForStartBB);
+    Builder.SetInsertPoint(ForStartBB);
+
+    llvm::Value* Cond = Condition->Codegen();
+   
+    // Condition branch
+    Builder.CreateCondBr(Cond, ForTrueBB, ForEndBB);
+
+    Builder.SetInsertPoint(ForTrueBB);
+    ForBlock->Codegen();
+    Builder.CreateBr(ForPostBB);
+   
+    Builder.SetInsertPoint(ForPostBB); 
+    PostAssign->Codegen();
+    Builder.CreateBr(ForStartBB);
+
+    Builder.SetInsertPoint(ForEndBB);
+
+    //(symtbl.front()).erase("0_loopstart");
+    //(symtbl.front()).erase("0_looptrue") ;
+    //(symtbl.front()).erase("0_loopassign");
+    //(symtbl.front()).erase("0_loopend");
+  }
 };
 
 class ReturnStmtAST : public decafAST
@@ -1209,7 +1284,18 @@ public:
   {
     return string("BreakStmt");
   }
-  llvm::Value *Codegen() {}
+  llvm::Value *Codegen() 
+  {
+    llvm::BasicBlock* EndBB = (llvm::BasicBlock*)(access_symtbl("0_loopend")); 
+    if(EndBB != NULL)
+    {
+      Builder.CreateBr(EndBB);
+    }   
+    else
+    {
+      //throw semantic error
+    }   
+  }
 };
 
 class ContinueStmtAST : public decafAST
@@ -1219,7 +1305,18 @@ public:
   {
     return string("ContinueStmt");
   }
-  llvm::Value *Codegen() {}
+  llvm::Value *Codegen() 
+  {
+    llvm::BasicBlock* StartBB = (llvm::BasicBlock*)(access_symtbl("0_loopstart")); 
+    if(StartBB != NULL)
+    {
+      Builder.CreateBr(StartBB);
+    }   
+    else
+    {
+      //throw semantic error
+    }
+  }
 };
 
 class BinaryExprAST : public decafAST
@@ -1248,20 +1345,28 @@ public:
     llvm::Value* val = nullptr;
     llvm::Value* LValue;
     llvm::Value* RValue;
+
+    llvm::BasicBlock *CurBB;
+    llvm::BasicBlock* RBB;
+    llvm::Function *func;
+    llvm::BasicBlock* MergeBB;
     llvm::PHINode* phi;
+
     int CurOp = getOperator(BinaryOp);
     if((CurOp != T_AND) && (CurOp != T_OR))
     {
       LValue = LeftValue->Codegen();
       RValue = RightValue->Codegen();
     }
-    
-    // control flow basic blocks for boolean short circuiting 
-    llvm::BasicBlock *CurBB   = Builder.GetInsertBlock();
-    llvm::Function *func      = CurBB->getParent(); 
-    //llvm::BasicBlock* LBB     = llvm::BasicBlock::Create(llvm::getGlobalContext(), "lval", func);  
-    llvm::BasicBlock* RBB     = llvm::BasicBlock::Create(llvm::getGlobalContext(), "rval", func); 
-    llvm::BasicBlock* MergeBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "merge", func); 
+    else
+    {
+      // control flow basic blocks for boolean short circuiting 
+      CurBB   = Builder.GetInsertBlock();
+      func    = CurBB->getParent();
+      RBB     = llvm::BasicBlock::Create(llvm::getGlobalContext(), "rval", func); 
+      MergeBB = llvm::BasicBlock::Create(llvm::getGlobalContext(), "merge", func); 
+    }  
+
     switch(getOperator(BinaryOp))
     {  
       case T_AND: 
