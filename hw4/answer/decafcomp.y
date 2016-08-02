@@ -132,7 +132,6 @@ program: extern_list decafpackage
          catch (std::runtime_error &e)
          {
            cout << "semantic error: " << e.what() << endl;
-           //cout << prog->str() << endl; 
            exit(EXIT_FAILURE);
          } 
          delete prog;
