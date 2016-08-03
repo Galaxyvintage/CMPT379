@@ -959,12 +959,14 @@ public:
     //cout<<"Accessing name in symtbl: "<<Name<<endl;
     llvm::Value* val = access_symtbl(Name);
 
+    if(val == NULL)
+    {
+      throw runtime_error("undefined variable name:" + Name);
+    } 
+
     if(ArrayFlag == false)
     {
-      if(val != NULL)
-      { 
-        val = Builder.CreateLoad(val,Name);         
-      }
+      val = Builder.CreateLoad(val,Name);         
     }
     else
     { 
@@ -1293,7 +1295,7 @@ public:
     }   
     else
     {
-      //throw semantic error
+      throw runtime_error("invalid use of Break statement");
     }   
   }
 };
@@ -1314,7 +1316,7 @@ public:
     }   
     else
     {
-      //throw semantic error
+      throw runtime_error("invalid use of Continue statement");
     }
   }
 };
